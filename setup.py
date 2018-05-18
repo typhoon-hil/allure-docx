@@ -12,9 +12,6 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
 
-    # Should be present so MANIFEST.in is taken into account. However only adds files that are inside package.
-    include_package_data=True,
-
     entry_points={
         'console_scripts': ['allure-docx = allure_docx:main'],
     },

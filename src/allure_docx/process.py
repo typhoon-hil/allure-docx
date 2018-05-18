@@ -44,7 +44,8 @@ def build_data(alluredir):
     json_results = [f for f in listdir(alluredir) if isfile(join(alluredir, f)) and "result" in f]
     json_containers = [f for f in listdir(alluredir) if isfile(join(alluredir, f)) and "container" in f]
 
-    session = {"start": None,
+    session = {"alluredir": alluredir,
+               "start": None,
                "stop": None,
                "results": {
                    "broken": 0,
@@ -108,6 +109,8 @@ def build_data(alluredir):
 
 
 def create_piechart(session):
+    filename = "pie.png"
+    session['piechart_source'] = os.path.join(session['alluredir'], filename)
     mpl.rcParams['font.size'] = 17.0
     explode = (0.05, 0.05, 0.05, 0.05)
     fig1, ax1 = plt.subplots()
@@ -119,6 +122,8 @@ def create_piechart(session):
 def create_docx(sorted_results, session, template_path, output_path):
 
     def create_TOC(document):
+        # Snippet from:
+        # https://github.com/python-openxml/python-docx/issues/36
         paragraph = document.add_paragraph()
         run = paragraph.add_run()
         fldChar = OxmlElement('w:fldChar')  # creates a new element
@@ -143,34 +148,38 @@ def create_docx(sorted_results, session, template_path, output_path):
         r_element.append(fldChar4)
         p_element = paragraph._p
 
+    def print_attachments(document, item):
+        if 'attachments' in item:
+            for attachment in item['attachments']:
+                document.add_paragraph("[Attachment] {}".format(attachment['name']), style="Step")
+                if "image" in attachment['type']:
+                    document.add_picture(os.path.join(session['alluredir'], attachment['source']), width=Mm(100))
+                    document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
     def print_steps(document, parent_step, indent=0):
         indent_str = indent*INDENT*" "
-        for step in parent_step:
-            if step['status'] in ["failed", "broken"]:
-                stepstyle = "Step Failed"
-            else:
-                stepstyle = "Step"
-            document.add_paragraph("{}> {}".format(indent_str,step['name']), style=stepstyle)
-            if 'parameters' in step:
-                for p in step['parameters']:
-                    paragraph = document.add_paragraph("{}    ".format(indent_str), style='Step Param Parag')
-                    paragraph.add_run("{} = {}".format(p['name'], _format_argval(p['value'])), style='Step Param')
-            if 'statusDetails' in step:
-                document.add_paragraph(step['statusDetails']['message'], style=stepstyle)
-                table = document.add_table(rows=1, cols=1, style="Trace table")
-                hdr_cells = table.rows[0].cells
-                hdr_cells[0].add_paragraph(step['statusDetails']['trace']+'\n', style='Code')
-            if 'attachments' in step:
-                for attachment in step['attachments']:
-                    document.add_paragraph("{} [Attachment] {}".format(indent_str, attachment['name']), style="Step")
-                    document.add_picture(os.path.join(alluredir, attachment['source']), width=Mm(100))
-                    document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-            if 'steps' in step:
-                print_steps(step['steps'], document, indent+1)
+        if 'steps' in parent_step:
+            for step in parent_step['steps']:
+                if step['status'] in ["failed", "broken"]:
+                    stepstyle = "Step Failed"
+                else:
+                    stepstyle = "Step"
+                document.add_paragraph("{}> {}".format(indent_str,step['name']), style=stepstyle)
+                if 'parameters' in step:
+                    for p in step['parameters']:
+                        paragraph = document.add_paragraph("{}    ".format(indent_str), style='Step Param Parag')
+                        paragraph.add_run("{} = {}".format(p['name'], _format_argval(p['value'])), style='Step Param')
+                if 'statusDetails' in step:
+                    document.add_paragraph(step['statusDetails']['message'], style=stepstyle)
+                    table = document.add_table(rows=1, cols=1, style="Trace table")
+                    hdr_cells = table.rows[0].cells
+                    hdr_cells[0].add_paragraph(step['statusDetails']['trace']+'\n', style='Code')
+                print_attachments(document, step)
+                print_steps(document, step, indent+1)
 
     document = Document(template_path)
 
-    document.add_heading('TyphoonTest', 0)
+    document.add_heading('Allure', 0)
     document.add_paragraph('Test Report', style='Subtitle')
 
     document.add_paragraph('Test Session Summary', style='Alternative Heading 1')
@@ -220,27 +229,26 @@ def create_docx(sorted_results, session, template_path, output_path):
             if 'befores' in parent:
                 for before in parent['befores']:
                     document.add_paragraph('[Fixture] {}'.format(before['name']), style="Step")
-                    if 'steps' in before:
-                        print_steps(before['steps'], 1)
+                    print_attachments(document, before)
+                    print_steps(document, before, 1)
 
         document.add_heading('Test Body', level=2)
-        if 'steps' in test:
-            print_steps(test['steps'])
+        print_attachments(document, test)
+        print_steps(document, test)
 
         document.add_heading('Test Teardown', level=2)
         for parent in test['parents']:
             if 'afters' in parent:
                 for after in parent['afters']:
                     document.add_paragraph('[Fixture] {}'.format(after['name']), style="Step")
-                    if 'steps' in after:
-                        print_steps(after['steps'], 1)
+                    print_attachments(document, after)
+                    print_steps(document, after, 1)
 
     document.save(output_path)
 
 
 def run(alluredir, template_path, output_filename):
     results, session = build_data(alluredir)
-    session['piechart_source'] = os.path.join(alluredir, 'pie.png')
     create_piechart(session)
     create_docx(results, session, template_path, output_filename)
 
