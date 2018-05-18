@@ -11,7 +11,7 @@ Check usage by running `allure-docx --help`
 The generated docx contain a Table of Contents that needs to be manually updated after generation. Generating PDFs (see below) will automatically update the TOC though.
 
 ## ToDos:
-- This report does not takes all the fields in allure data model into account. Missing descriptionHtml, links, stage, labels, statusDetails specifics (flaky, known). This however could be very easily added in the script. Contributors are more then welcome to help making the report more complete.
+- This report does not takes all the fields in allure data model into account. Missing `descriptionHtml`, `links`, `stage`, `labels`, `statusDetails` specifics (`flaky`, `known`). This however could be very easily added in the script. Contributors are more then welcome to help making the report more complete.
 - Does not support a test result folder with old runs for the same tests.
 
 ## PDF
