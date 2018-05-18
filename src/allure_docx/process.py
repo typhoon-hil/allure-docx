@@ -1,12 +1,16 @@
-import json
-from os import listdir, chdir
+import os
+from os import listdir
 from os.path import join, isfile
 from time import ctime
 from datetime import timedelta
-from matplotlib import pyplot as plt
-import matplotlib as mpl
-import os
-from subprocess import check_output
+
+import json
+
+#from matplotlib import pyplot as plt
+#import matplotlib as mpl
+
+import pygal
+import pygal.style
 
 from docx.shared import Mm
 from docx import Document
@@ -111,12 +115,26 @@ def build_data(alluredir):
 def create_piechart(session):
     filename = "pie.png"
     session['piechart_source'] = os.path.join(session['alluredir'], filename)
-    mpl.rcParams['font.size'] = 17.0
-    explode = (0.05, 0.05, 0.05, 0.05)
-    fig1, ax1 = plt.subplots()
-    ax1.pie(session['results'].values(), explode=explode, labels=session['results'].keys(), autopct=lambda x:"{:.2f}%".format(x), colors=["y", "r", "grey", "g"], radius=1.5)
-    ax1.axis('equal')
-    plt.savefig(session['piechart_source'], bbox_inches="tight")
+
+    style = pygal.style.Style()
+    style.font_family="Arial"
+    style.label_font_family="Arial"
+    style.legend_font_family="Arial"
+    style.title_font_family="Arial"
+    style.value_font_family="Arial"
+    style.value_label_font_family="Arial"
+    config = pygal.Config()
+    config.show_legend = True
+    config.human_readable = True
+    config.print_values=True
+    config.print_labels=True
+    pie_chart = pygal.Pie(config=config, style=style)
+    pie_chart.add('IE', 19.5)
+    pie_chart.add('Firefox', 36.6)
+    pie_chart.add('Chrome', 36.3)
+    pie_chart.add('Safari', 4.5)
+    pie_chart.add('Opera', 2.3)
+    pie_chart.render_to_png(session['piechart_source'])
 
 
 def create_docx(sorted_results, session, template_path, output_path):
