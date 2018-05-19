@@ -6,17 +6,13 @@ from datetime import timedelta
 
 import json
 
-#from matplotlib import pyplot as plt
-#import matplotlib as mpl
-
-import pygal
-import pygal.style
-
 from docx.shared import Mm
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+
+from . import piechart
 
 
 INDENT = 6
@@ -110,31 +106,6 @@ def build_data(alluredir):
         session['results_relative'][item] = "{:.2f}%".format(100*session['results'][item]/session['total'])
 
     return sorted_results, session
-
-
-def create_piechart(session):
-    filename = "pie.png"
-    session['piechart_source'] = os.path.join(session['alluredir'], filename)
-
-    style = pygal.style.Style()
-    style.font_family="Arial"
-    style.label_font_family="Arial"
-    style.legend_font_family="Arial"
-    style.title_font_family="Arial"
-    style.value_font_family="Arial"
-    style.value_label_font_family="Arial"
-    config = pygal.Config()
-    config.show_legend = True
-    config.human_readable = True
-    config.print_values=True
-    config.print_labels=True
-    pie_chart = pygal.Pie(config=config, style=style)
-    pie_chart.add('IE', 19.5)
-    pie_chart.add('Firefox', 36.6)
-    pie_chart.add('Chrome', 36.3)
-    pie_chart.add('Safari', 4.5)
-    pie_chart.add('Opera', 2.3)
-    pie_chart.render_to_png(session['piechart_source'])
 
 
 def create_docx(sorted_results, session, template_path, output_path):
@@ -267,7 +238,11 @@ def create_docx(sorted_results, session, template_path, output_path):
 
 def run(alluredir, template_path, output_filename):
     results, session = build_data(alluredir)
-    create_piechart(session)
+
+    imgfile = os.path.join(session['alluredir'], "pie.png")
+    session['piechart_source'] = imgfile
+    piechart.create_piechart(session["results"], imgfile)
+
     create_docx(results, session, template_path, output_filename)
 
 
