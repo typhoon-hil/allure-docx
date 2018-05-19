@@ -1,1 +1,0 @@
-pyinstaller --clean --add-data=template.docx;. -F --log-level=DEBUG -n allure-docx commandline.py

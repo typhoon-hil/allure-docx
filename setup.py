@@ -7,7 +7,7 @@ setup(
     author="Victor Maryama (Typhoon HIL, Inc)",
     version="0.1.0",
     license="MIT",
-    install_requires=["Click", "python-docx"],
+    install_requires=["Click", "python-docx", "cairosvg", "pygal"],
 
     packages=find_packages('src'),
     package_dir={'': 'src'},
