@@ -3,6 +3,7 @@ from allure_docx import process
 import os
 import click
 import sys
+import distutils.spawn
 
 template_dir = None
 if getattr( sys, 'frozen', False ) :
@@ -23,7 +24,7 @@ print("template_dir: {}".format(template_dir))
 @click.argument('alluredir')
 @click.argument('output')
 @click.option('--template', default=None, help='Path (absolute or relative) to a custom docx template file with styles')
-@click.option('--pdf', is_flag=True, help='(Windows Only) Also generate a pdf file from created docx using OfficeToPdf (needs MS Word installed)')
+@click.option('--pdf', is_flag=True, help='Try to generate a pdf file from created docx using LibreOfficeToPDF or OfficeToPDF (needs MS Word installed)')
 def main(alluredir, output, template, pdf):
     """alluredir: Path (relative or absolute) to alluredir folder with test results
 
@@ -38,11 +39,21 @@ def main(alluredir, output, template, pdf):
     else:
         if not os.path.isabs(template):
             template = os.path.join(cwd, template)
+
     process.run(alluredir, template, output)
+
     if pdf:
         filepath, ext = os.path.splitext(output)
         output_pdf = filepath+".pdf"
-        print(check_output("OfficeToPDF /bookmarks /print {} {}".format(output, output_pdf), shell=True).decode())
+        if distutils.spawn.find_executable("OfficeToPDF") is not None:
+            print("Found OfficeToPDF, using it. Make sure you have MS Word installed.")
+            print(check_output("OfficeToPDF /bookmarks /print {} {}".format(output, output_pdf), shell=True).decode())
+        elif distutils.spawn.find_executable("LibreOfficeToPDF") is not None:
+            print("Found LibreOfficeToPDF, using it. Make sure you have LibreOffice installed and LIBREOFFICE_PROGRAM variable set.")
+            print(check_output("LibreOfficeToPDF {}".format(output), shell=True).decode())
+        else:
+            print("Could not find either OfficeToPDF or LibreOfficeToPDF. Not generating PDF.")
+
 
 if __name__ == "__main__":
     main()
