@@ -13,6 +13,9 @@ def create_piechart(data, imgfile):
     style = pygal.style.Style()
     style.colors = (yellow, red, grey, green)
 
+    style.background = "#FFFFFF"
+    style.plot_background = "#FFFFFF"
+
     style.font_family=font_family
     style.label_font_family=font_family
     style.legend_font_family=font_family
