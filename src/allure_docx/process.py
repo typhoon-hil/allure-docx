@@ -6,7 +6,7 @@ from datetime import timedelta
 
 import json
 
-from docx.shared import Mm
+from docx.shared import Mm, Cm
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
@@ -33,12 +33,13 @@ def _format_argval(argval):
 def build_data(alluredir):
 
     def _process_steps(session, node):
+        if session['start'] is None or node['start'] < session['start']:
+            session['start'] = node['start']
+        if session['stop'] is None or node['stop'] > session['stop']:
+            session['stop'] = node['stop']
+
         if "steps" in node:
             for step in node['steps']:
-                if session['start'] is None or step['start'] < session['start']:
-                    session['start'] = step['start']
-                if session['stop'] is None or step['stop'] > session['stop']:
-                    session['stop'] = step['stop']
                 _process_steps(session, step)
 
     json_results = [f for f in listdir(alluredir) if isfile(join(alluredir, f)) and "result" in f]
@@ -108,7 +109,7 @@ def build_data(alluredir):
     return sorted_results, session
 
 
-def create_docx(sorted_results, session, template_path, output_path):
+def create_docx(sorted_results, session, template_path, output_path, title, logo_path, logo_height):
 
     def create_TOC(document):
         # Snippet from:
@@ -168,8 +169,19 @@ def create_docx(sorted_results, session, template_path, output_path):
 
     document = Document(template_path)
 
-    document.add_heading('Allure', 0)
+    if logo_path is not None:
+        if logo_height is not None:
+            logo_height = Cm(logo_height)
+        document.add_picture(logo_path, height=logo_height)
+        document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    if title != '':
+        if title is None:
+            title = 'Allure'
+        document.add_heading(title, 0)
+        document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
     document.add_paragraph('Test Report', style='Subtitle')
+    document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     document.add_paragraph('Test Session Summary', style='Alternative Heading 1')
     table = document.add_table(rows=1, cols=2)
@@ -236,14 +248,14 @@ def create_docx(sorted_results, session, template_path, output_path):
     document.save(output_path)
 
 
-def run(alluredir, template_path, output_filename):
+def run(alluredir, template_path, output_filename, title, logo_path, logo_height):
     results, session = build_data(alluredir)
 
     imgfile = os.path.join(session['alluredir'], "pie.png")
     session['piechart_source'] = imgfile
     piechart.create_piechart(session["results"], imgfile)
 
-    create_docx(results, session, template_path, output_filename)
+    create_docx(results, session, template_path, output_filename, title, logo_path, logo_height)
 
 
 

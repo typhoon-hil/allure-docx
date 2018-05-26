@@ -16,6 +16,7 @@ setup(
     include_package_data=True,
 
     entry_points={
+        'pytest11': ['allure-docx = allure_docx.plugin'],
         'console_scripts': ['allure-docx = allure_docx.commandline:main'],
     },
 )

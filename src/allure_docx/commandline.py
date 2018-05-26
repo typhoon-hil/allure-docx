@@ -5,6 +5,7 @@ import click
 import sys
 import distutils.spawn
 
+
 template_dir = None
 if getattr( sys, 'frozen', False ) :
         # running in a bundle
@@ -20,12 +21,16 @@ print("CWD: {}".format(cwd))
 print("__file__: {}".format(__file__))
 print("template_dir: {}".format(template_dir))
 
+
 @click.command()
 @click.argument('alluredir')
 @click.argument('output')
 @click.option('--template', default=None, help='Path (absolute or relative) to a custom docx template file with styles')
 @click.option('--pdf', is_flag=True, help='Try to generate a pdf file from created docx using LibreOfficeToPDF or OfficeToPDF (needs MS Word installed)')
-def main(alluredir, output, template, pdf):
+@click.option('--title', default=None, help='Custom report title')
+@click.option('--logo', default=None, help='Path to custom report logo image')
+@click.option('--logo-height', default=None, help='Image height in centimeters. Width is scaled to keep aspect ratio')
+def main(alluredir, output, template, pdf, title, logo, logo_height):
     """alluredir: Path (relative or absolute) to alluredir folder with test results
 
     output: Path (relative or absolute) with filename for the generated docx file"""
@@ -40,7 +45,9 @@ def main(alluredir, output, template, pdf):
         if not os.path.isabs(template):
             template = os.path.join(cwd, template)
 
-    process.run(alluredir, template, output)
+    if logo_height is not None:
+        logo_height = int(logo_height)
+    process.run(alluredir, template, output, title, logo, logo_height)
 
     if pdf:
         filepath, ext = os.path.splitext(output)
@@ -52,7 +59,7 @@ def main(alluredir, output, template, pdf):
             print("Found LibreOfficeToPDF, using it. Make sure you have LibreOffice installed and LIBREOFFICE_PROGRAM variable set.")
             print(check_output("LibreOfficeToPDF {}".format(output), shell=True).decode())
         else:
-            print("Could not find either OfficeToPDF or LibreOfficeToPDF. Not generating PDF.")
+            print("Could not find neither OfficeToPDF nor LibreOfficeToPDF. Not generating PDF.")
 
 
 if __name__ == "__main__":
