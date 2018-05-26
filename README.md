@@ -23,6 +23,17 @@ On Windows and Linux, PDFs can be generated using `LibreOfficeToPDF` application
 
 https://github.com/typhoon-hil/LibreOfficeToPDF
 
+### Custom Title and Logo
+You can use the `--title` option to customize the docx report title.
+ 
+If you want to remove the title altogether (e.g. your logo already has the company title), you can set `--title=""`.
+
+You can also use the `--logo` option with a path to a custom image to add the test title and the `--logo-height` option to adjust the height size of the logo image (in centimeters).
+
+Example invocation:
+
+`allure-docx --pdf --title="My Company" --logo=C:\mycompanylogo.png --logo-height=2 allure allure.docx`
+
 
 ## TODOs:
 - This report does not takes all the fields in allure data model into account. Missing `descriptionHtml`, `links`, `stage`, `labels`, `statusDetails` specifics (`flaky`, `known`). This however could be very easily added in the script. Contributors are more then welcome to help making the report more complete.
