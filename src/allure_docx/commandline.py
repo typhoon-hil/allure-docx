@@ -46,7 +46,7 @@ def main(alluredir, output, template, pdf, title, logo, logo_height):
             template = os.path.join(cwd, template)
 
     if logo_height is not None:
-        logo_height = int(logo_height)
+        logo_height = float(logo_height)
     process.run(alluredir, template, output, title, logo, logo_height)
 
     if pdf:
