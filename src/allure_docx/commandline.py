@@ -10,16 +10,11 @@ template_dir = None
 if getattr( sys, 'frozen', False ) :
         # running in a bundle
         template_dir = sys._MEIPASS
-        print("Bundle")
 else :
         # running live
         template_dir = os.path.dirname(os.path.realpath(__file__))
-        print("Live")
 
 cwd = os.getcwd()
-print("CWD: {}".format(cwd))
-print("__file__: {}".format(__file__))
-print("template_dir: {}".format(template_dir))
 
 
 @click.command()
@@ -40,10 +35,10 @@ def main(alluredir, output, template, pdf, title, logo, logo_height):
         output = os.path.join(cwd, output)
     if template is None:
         template = os.path.join(template_dir, "template.docx")
-        print("Template: {}".format(template))
     else:
         if not os.path.isabs(template):
             template = os.path.join(cwd, template)
+    print("Template: {}".format(template))
 
     if logo_height is not None:
         logo_height = float(logo_height)
