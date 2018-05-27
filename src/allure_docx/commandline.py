@@ -1,4 +1,4 @@
-from subprocess import check_output
+import subprocess
 from allure_docx import process
 import os
 import click
@@ -49,10 +49,14 @@ def main(alluredir, output, template, pdf, title, logo, logo_height):
         output_pdf = filepath+".pdf"
         if distutils.spawn.find_executable("OfficeToPDF") is not None:
             print("Found OfficeToPDF, using it. Make sure you have MS Word installed.")
-            print(check_output("OfficeToPDF /bookmarks /print {} {}".format(output, output_pdf), shell=True).decode())
+            proc = subprocess.run(["OfficeToPDF", "/bookmarks", "/print", output, output_pdf], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            print(proc.stdout.decode())
+            sys.exit(proc.returncode)
         elif distutils.spawn.find_executable("LibreOfficeToPDF") is not None:
             print("Found LibreOfficeToPDF, using it. Make sure you have LibreOffice installed and LIBREOFFICE_PROGRAM variable set.")
-            print(check_output("LibreOfficeToPDF {}".format(output), shell=True).decode())
+            proc = subprocess.run(["LibreOfficeToPDF", output], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            print(proc.stdout.decode())
+            sys.exit(proc.returncode)
         else:
             print("Could not find neither OfficeToPDF nor LibreOfficeToPDF. Not generating PDF.")
             sys.exit(1)
