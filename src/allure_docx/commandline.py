@@ -55,6 +55,7 @@ def main(alluredir, output, template, pdf, title, logo, logo_height):
             print(check_output("LibreOfficeToPDF {}".format(output), shell=True).decode())
         else:
             print("Could not find neither OfficeToPDF nor LibreOfficeToPDF. Not generating PDF.")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
