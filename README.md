@@ -43,11 +43,11 @@ The `--pdf` option will search for either `OfficeToPDF` or `LibreOfficeToPDF` ap
 
 On Windows, PDFs can be generated from generated docx files using OfficeToPDF application. MS Word needs to be installed.
 
-https://github.com/cognidox/OfficeToPDF
+https://github.com/cognidox/OfficeToPDF/releases
 
 On Windows and Linux, PDFs can be generated using `LibreOfficeToPDF` application. LibreOffice should be installed.
 
-https://github.com/typhoon-hil/LibreOfficeToPDF
+https://github.com/typhoon-hil/LibreOfficeToPDF/releases
 
 ### Custom Title and Logo
 You can use the `--title` option to customize the docx report title.
