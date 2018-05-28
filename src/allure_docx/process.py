@@ -67,28 +67,43 @@ def build_data(alluredir):
     for file in json_containers:
         with open(join(alluredir, file), encoding="utf-8") as f:
             container = json.load(f)
-            if 'befores' in container:
-                for before in container['befores']:
-                    _process_steps(session, before)
-            if 'afters' in container:
-                for after in container['afters']:
-                    _process_steps(session, after)
             data_containers.append(container)
 
     data_results = []
     for file in json_results:
         with open(join(alluredir, file), encoding="utf-8") as f:
             result = json.load(f)
-            _process_steps(session, result)
-            session['total'] += 1
-            session['results'][result['status']] += 1
-            result["parents"] = []
-            for container in data_containers:
-                if "children" not in container:
-                    continue
-                if result["uuid"] in container["children"]:
-                    result["parents"].append(container)
+
+            skip = False
+            for previous_item in list(data_results): # copy
+                if previous_item["name"] == result["name"]:
+                    if previous_item["stop"] > result["stop"]:
+                        skip = True
+                    else:
+                        data_results.remove(previous_item)
+                    break
+            if skip:
+                continue
             data_results.append(result)
+
+    for result in data_results:
+        _process_steps(session, result)
+        session['total'] += 1
+        session['results'][result['status']] += 1
+
+        result["parents"] = []
+        for container in data_containers:
+            if "children" not in container:
+                continue
+            if result["uuid"] in container["children"]:
+                result["parents"].append(container)
+                if 'befores' in container:
+                    for before in container['befores']:
+                        _process_steps(session, before)
+                if 'afters' in container:
+                    for after in container['afters']:
+                        _process_steps(session, after)
+
 
     def getsortingkey(d):
         classification = {"broken": 0,
@@ -204,10 +219,12 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
 
     for test in sorted_results:
         document.add_page_break()
-        document.add_heading('{}-{}'.format(test['name'], test['status']), level=1)
+        document.add_heading('{} - {}'.format(test['name'], test['status']), level=1)
 
         if 'description' in test:
             document.add_paragraph(test['description'])
+        else:
+            document.add_paragraph('No description available.')
 
         if 'parameters' in test:
             document.add_heading('Parameters', level=2)
@@ -232,10 +249,14 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                     document.add_paragraph('[Fixture] {}'.format(before['name']), style="Step")
                     print_attachments(document, before)
                     print_steps(document, before, 1)
+        if document.paragraphs[-1].text == "Test Setup":
+            document.add_paragraph('No test setup information available.')
 
         document.add_heading('Test Body', level=2)
         print_attachments(document, test)
         print_steps(document, test)
+        if document.paragraphs[-1].text == "Test Body":
+            document.add_paragraph('No test body information available.')
 
         document.add_heading('Test Teardown', level=2)
         for parent in test['parents']:
@@ -244,6 +265,8 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                     document.add_paragraph('[Fixture] {}'.format(after['name']), style="Step")
                     print_attachments(document, after)
                     print_steps(document, after, 1)
+        if document.paragraphs[-1].text == "Test Teardown":
+            document.add_paragraph('No test teardown information available.')
 
     document.save(output_path)
 
