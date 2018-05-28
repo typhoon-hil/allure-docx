@@ -4,16 +4,35 @@ https://python-docx.readthedocs.io/en/latest/
 
 Currently tested only with Python 3.6
 
+## Limitations
+Check the issues on the repository to see the current limitations.
+
+## Questions
+
+Feel free to open an issue ticket with any problems or questions.
+
 ## Installation
-Clone the repository and install with `pip install .`. Then if your python Scripts folder is in the path, you can run directly from command line as `allure-docx`.
+
+### Requirements
+This project uses `cairosvg` package, which in turn needs Cairo binary libraries installed in a place in PATH.
+
+For windows, cairo precompiled binary dlls can be found here:
+https://github.com/preshing/cairo-windows/releases
+
+### Installing with Python and pip
+You need a installed python interpreter.
+
+Clone the repository and install with `pip install .`. Then if your python Scripts folder is in the PATH, you can run directly from command line as `allure-docx`.
 
 ## Usage
 Check usage by running `allure-docx --help`
 
+You can generate the docx file by running `allure-docx ALLUREDIR filename.docx`
+
 The generated docx contain a Table of Contents that needs to be manually updated after generation. Generating PDFs (see below) will automatically update the TOC though.
 
 ### PDF
-The `--pdf` option will search for either `OfficeToPDF` or `LibreOfficeToPDF` application in the path to generate the PDF.
+The `--pdf` option will search for either `OfficeToPDF` or `LibreOfficeToPDF` application in the PATH to generate the PDF.
 
 On Windows, PDFs can be generated from generated docx files using OfficeToPDF application. MS Word needs to be installed.
 
@@ -35,9 +54,5 @@ Example invocation:
 `allure-docx --pdf --title="My Company" --logo=C:\mycompanylogo.png --logo-height=2 allure allure.docx`
 
 
-## TODOs:
-- This report does not takes all the fields in allure data model into account. Missing `descriptionHtml`, `links`, `stage`, `labels`, `statusDetails` specifics (`flaky`, `known`). This however could be very easily added in the script. Contributors are more then welcome to help making the report more complete.
-- Does not support a test result folder with old runs for the same tests. It shows them all as individual test cases.
-- This package doesn't have any tests yet.
-- Only images are attached to the docx file. For other types of attachment, only name is shown.
+
 
