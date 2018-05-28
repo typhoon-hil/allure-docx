@@ -22,7 +22,7 @@ https://github.com/preshing/cairo-windows/releases
 ### Installing with Python and pip
 You need a installed python interpreter.
 
-Clone the repository and install with "`pip install .`" (there is a dot at the end, indicating the current folder). Then if your python Scripts folder is in the PATH, you can run directly from command line as `allure-docx`.
+Install directly from this git repository using with `pip install git+https://github.com/typhoon-hil/allure-docx.git`. Then if your python Scripts folder is in the PATH, you can run directly from command line as `allure-docx`.
 
 ## Usage
 Check usage by running `allure-docx --help`
