@@ -19,6 +19,13 @@ This project uses `cairosvg` package, which in turn needs Cairo binary libraries
 For windows, cairo precompiled binary dlls can be found here:
 https://github.com/preshing/cairo-windows/releases
 
+### Downloading and using the binaries directly
+We publish windows standalone executable files. With them you can use it without having to install anything else (no python, etc..).
+
+You can download them at: https://github.com/typhoon-hil/allure-docx/releases
+
+Then you can use the executable directly (possibly adding it a folder added to PATH).
+
 ### Installing with Python and pip
 You need a installed python interpreter.
 
