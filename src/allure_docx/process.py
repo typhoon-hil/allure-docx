@@ -214,7 +214,7 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
     run = paragraph.add_run()
     run.add_picture(session['piechart_source'], width=Mm(75))
 
-    document.add_paragraph('Test Results', style="Alternative Heading 1")
+    document.add_paragraph('Test Results', style="TOC Header")
     create_TOC(document)
 
     for test in sorted_results:
