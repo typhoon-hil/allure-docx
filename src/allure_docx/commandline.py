@@ -55,7 +55,7 @@ def main(alluredir, output, template, pdf, title, logo, logo_height):
             print(proc.stdout.decode())
             sys.exit(proc.returncode)
         elif libreofficetopdf is not None:
-            print("Found LibreOfficeToPDF, using it. Make sure you have LibreOffice installed and LIBREOFFICE_PROGRAM variable set.")
+            print("Found LibreOfficeToPDF, using it. Make sure you have LibreOffice installed.")
             proc = subprocess.run([libreofficetopdf, output], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             print(proc.stdout.decode())
             sys.exit(proc.returncode)
