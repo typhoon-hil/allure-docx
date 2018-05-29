@@ -33,10 +33,11 @@ def _format_argval(argval):
 def build_data(alluredir):
 
     def _process_steps(session, node):
-        if session['start'] is None or node['start'] < session['start']:
-            session['start'] = node['start']
-        if session['stop'] is None or node['stop'] > session['stop']:
-            session['stop'] = node['stop']
+        if 'start' in node:
+            if session['start'] is None or node['start'] < session['start']:
+                session['start'] = node['start']
+            if session['stop'] is None or node['stop'] > session['stop']:
+                session['stop'] = node['stop']
 
         if "steps" in node:
             for step in node['steps']:
@@ -73,11 +74,12 @@ def build_data(alluredir):
     for file in json_results:
         with open(join(alluredir, file), encoding="utf-8") as f:
             result = json.load(f)
+            result["_lastmodified"] = os.path.getmtime(join(alluredir, file))
 
             skip = False
             for previous_item in list(data_results): # copy
                 if previous_item["name"] == result["name"]:
-                    if previous_item["stop"] > result["stop"]:
+                    if previous_item["_lastmodified"] > result["_lastmodified"]:
                         skip = True
                     else:
                         data_results.remove(previous_item)
@@ -114,9 +116,14 @@ def build_data(alluredir):
 
     sorted_results = sorted(data_results, key=getsortingkey)
 
-    session['duration'] = str(timedelta(seconds=(session['stop']-session['start'])/1000.0))
-    session['start'] = ctime(session['start']/1000.0)
-    session['stop'] = ctime(session['stop']/1000.0)
+    if session['start'] is not None:
+        session['duration'] = str(timedelta(seconds=(session['stop']-session['start'])/1000.0))
+        session['start'] = ctime(session['start']/1000.0)
+        session['stop'] = ctime(session['stop']/1000.0)
+    else:
+        session['duration'] = "Not available"
+        session['start'] = "Not available"
+        session['stop'] = "Not available"
 
     for item in session['results']:
         session['results_relative'][item] = "{:.2f}%".format(100*session['results'][item]/session['total'])
