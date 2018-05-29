@@ -3,7 +3,7 @@ from allure_docx import process
 import os
 import click
 import sys
-import distutils.spawn
+import shutil
 
 
 template_dir = None
@@ -47,14 +47,16 @@ def main(alluredir, output, template, pdf, title, logo, logo_height):
     if pdf:
         filepath, ext = os.path.splitext(output)
         output_pdf = filepath+".pdf"
-        if distutils.spawn.find_executable("OfficeToPDF") is not None:
+        officetopdf = shutil.which("OfficeToPDF")
+        libreofficetopdf = shutil.which("LibreOfficeToPDF")
+        if officetopdf is not None:
             print("Found OfficeToPDF, using it. Make sure you have MS Word installed.")
-            proc = subprocess.run(["OfficeToPDF", "/bookmarks", "/print", output, output_pdf], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            proc = subprocess.run([officetopdf, "/bookmarks", "/print", output, output_pdf], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             print(proc.stdout.decode())
             sys.exit(proc.returncode)
-        elif distutils.spawn.find_executable("LibreOfficeToPDF") is not None:
+        elif libreofficetopdf is not None:
             print("Found LibreOfficeToPDF, using it. Make sure you have LibreOffice installed and LIBREOFFICE_PROGRAM variable set.")
-            proc = subprocess.run(["LibreOfficeToPDF", output], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            proc = subprocess.run([libreofficetopdf, output], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             print(proc.stdout.decode())
             sys.exit(proc.returncode)
         else:
