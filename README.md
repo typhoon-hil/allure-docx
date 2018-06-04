@@ -20,7 +20,7 @@ For windows, cairo precompiled binary dlls can be found here:
 https://github.com/preshing/cairo-windows/releases
 
 ### Downloading and using the binaries directly
-We publish windows standalone executable files. With them you can use it without having to install anything else (no python, etc..).
+We publish windows standalone executable files. With them you can use it without having to install anything else other than the cairo dlls, meaning no installing python, etc.
 
 You can download them at: https://github.com/typhoon-hil/allure-docx/releases
 
