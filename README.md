@@ -66,7 +66,7 @@ Example invocation:
 ## Building a standalone executable
 We use PyInstaller to create standalone executables. If you want to build an executable yourself, follow these steps:
 - Create a new virtual environment with the proper python version (tested using python 3, 32 or 64 bit so far)
-- Install using ONLY pip needed packages defined in `setup.py`. This prevents your executable to become too large with unnecessary dependencies
+- Install using pip ONLY needed packages defined in `setup.py`. This prevents your executable to become too large with unnecessary dependencies
 - Delete any previous `dist` folder from a previous PyInstaller run
 - Run the `build_exe.cmd` command to run PyInstaller and create a single file executable.
 
