@@ -39,6 +39,8 @@ Check usage by running `allure-docx --help`
 
 You can generate the docx file by running `allure-docx ALLUREDIR filename.docx`
 
+Use the `--detail-level` option to control level of detail in the docx report (e.g. print all steps or not). Check the help for available levels.
+
 The generated docx contain a Table of Contents that needs to be manually updated after generation. Generating PDFs (see below) will automatically update the TOC though.
 
 ### PDF

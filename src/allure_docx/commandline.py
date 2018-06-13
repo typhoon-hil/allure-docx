@@ -21,11 +21,12 @@ cwd = os.getcwd()
 @click.argument('alluredir')
 @click.argument('output')
 @click.option('--template', default=None, help='Path (absolute or relative) to a custom docx template file with styles')
+@click.option('--detail-level', type=click.Choice(['full', 'full_onfail', 'compact']), default="full", help="Level of detail in the docx report.")
 @click.option('--pdf', is_flag=True, help='Try to generate a pdf file from created docx using LibreOfficeToPDF or OfficeToPDF (needs MS Word installed)')
 @click.option('--title', default=None, help='Custom report title')
 @click.option('--logo', default=None, help='Path to custom report logo image')
 @click.option('--logo-height', default=None, help='Image height in centimeters. Width is scaled to keep aspect ratio')
-def main(alluredir, output, template, pdf, title, logo, logo_height):
+def main(alluredir, output, template, pdf, title, logo, logo_height, detail_level):
     """alluredir: Path (relative or absolute) to alluredir folder with test results
 
     output: Path (relative or absolute) with filename for the generated docx file"""
@@ -42,7 +43,7 @@ def main(alluredir, output, template, pdf, title, logo, logo_height):
 
     if logo_height is not None:
         logo_height = float(logo_height)
-    process.run(alluredir, template, output, title, logo, logo_height)
+    process.run(alluredir, template, output, title, logo, logo_height, detail_level)
 
     if pdf:
         filepath, ext = os.path.splitext(output)

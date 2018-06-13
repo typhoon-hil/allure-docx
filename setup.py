@@ -5,7 +5,7 @@ setup(
     name="allure-docx",
     description="docx report generator based on allure-generated json files",
     author="Victor Maryama (Typhoon HIL, Inc)",
-    version="0.1.3",
+    version="0.2.0",
     license="MIT",
     install_requires=["Click", "python-docx", "cairosvg", "pygal"],
 

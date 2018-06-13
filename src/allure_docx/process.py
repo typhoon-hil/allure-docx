@@ -137,7 +137,7 @@ def build_data(alluredir):
     return sorted_results, session
 
 
-def create_docx(sorted_results, session, template_path, output_path, title, logo_path, logo_height):
+def create_docx(sorted_results, session, template_path, output_path, title, logo_path, logo_height, detail_level):
 
     def create_TOC(document):
         # Snippet from:
@@ -212,86 +212,94 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
     document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     document.add_paragraph('Test Session Summary', style='Alternative Heading 1')
-    table = document.add_table(rows=1, cols=2)
 
-    summary_cell = table.rows[0].cells[0]
-    summary_cell.add_paragraph('Start: {}\nEnd: {}\nDuration: {}'.format(session['start'], session['stop'], session['duration']))
+    if not sorted_results:
+        document.add_paragraph('No test result files were found.')
+    else:
+        table = document.add_table(rows=1, cols=2)
+        summary_cell = table.rows[0].cells[0]
+        summary_cell.add_paragraph('Start: {}\nEnd: {}\nDuration: {}'.format(session['start'], session['stop'], session['duration']))
 
-    results_strs = []
-    for item in session['results']:
-        results_strs.append("{}: {} ({})".format(item, session['results'][item], session['results_relative'][item]))
-    summary_cell.add_paragraph("\n".join(results_strs))
+        results_strs = []
+        for item in session['results']:
+            results_strs.append("{}: {} ({})".format(item, session['results'][item], session['results_relative'][item]))
+        summary_cell.add_paragraph("\n".join(results_strs))
 
-    piechart_cell = table.rows[0].cells[1]
-    paragraph = piechart_cell.paragraphs[0]
-    run = paragraph.add_run()
-    run.add_picture(session['piechart_source'], width=Mm(75))
+        piechart_cell = table.rows[0].cells[1]
+        paragraph = piechart_cell.paragraphs[0]
+        run = paragraph.add_run()
+        run.add_picture(session['piechart_source'], width=Mm(75))
 
-    document.add_paragraph('Test Results', style="TOC Header")
-    create_TOC(document)
+        document.add_paragraph('Test Results', style="TOC Header")
+        create_TOC(document)
 
-    for test in sorted_results:
         document.add_page_break()
-        document.add_heading('{} - {}'.format(test['name'], test['status']), level=1)
 
-        if 'description' in test:
-            document.add_paragraph(test['description'])
-        else:
-            document.add_paragraph('No description available.')
+        for test in sorted_results:
+            document.add_heading('{} - {}'.format(test['name'], test['status']), level=1)
 
-        if 'parameters' in test:
-            document.add_heading('Parameters', level=2)
-            for p in test['parameters']:
-                document.add_paragraph("{}: {}".format(p['name'], p['value']), style='Step')
-
-        if 'statusDetails' in test:
-            document.add_heading('Details', level=2)
-            if test['status'] in ["failed", "broken"]:
-                style = "Normal Failed"
+            if 'description' in test:
+                document.add_paragraph(test['description'])
             else:
-                style = None
-            document.add_paragraph(test['statusDetails']['message'], style=style)
-            table = document.add_table(rows=1, cols=1, style="Trace table")
-            hdr_cells = table.rows[0].cells
-            hdr_cells[0].add_paragraph(test['statusDetails']['trace']+'\n', style='Code')
+                document.add_paragraph('No description available.')
 
-        document.add_heading('Test Setup', level=2)
-        for parent in test['parents']:
-            if 'befores' in parent:
-                for before in parent['befores']:
-                    document.add_paragraph('[Fixture] {}'.format(before['name']), style="Step")
-                    print_attachments(document, before)
-                    print_steps(document, before, 1)
-        if document.paragraphs[-1].text == "Test Setup":
-            document.add_paragraph('No test setup information available.')
+            if 'parameters' in test:
+                document.add_heading('Parameters', level=2)
+                for p in test['parameters']:
+                    document.add_paragraph("{}: {}".format(p['name'], p['value']), style='Step')
 
-        document.add_heading('Test Body', level=2)
-        print_attachments(document, test)
-        print_steps(document, test)
-        if document.paragraphs[-1].text == "Test Body":
-            document.add_paragraph('No test body information available.')
+            if 'statusDetails' in test:
+                document.add_heading('Details', level=2)
+                if test['status'] in ["failed", "broken"]:
+                    style = "Normal Failed"
+                else:
+                    style = None
+                document.add_paragraph(test['statusDetails']['message'], style=style)
+                table = document.add_table(rows=1, cols=1, style="Trace table")
+                hdr_cells = table.rows[0].cells
+                hdr_cells[0].add_paragraph(test['statusDetails']['trace']+'\n', style='Code')
 
-        document.add_heading('Test Teardown', level=2)
-        for parent in test['parents']:
-            if 'afters' in parent:
-                for after in parent['afters']:
-                    document.add_paragraph('[Fixture] {}'.format(after['name']), style="Step")
-                    print_attachments(document, after)
-                    print_steps(document, after, 1)
-        if document.paragraphs[-1].text == "Test Teardown":
-            document.add_paragraph('No test teardown information available.')
+            if not detail_level == "compact":
+                if (detail_level == "full") or (detail_level == "full_onfail" and test['status'] in ['failed', 'broken']):
+                    document.add_heading('Test Setup', level=2)
+                    for parent in test['parents']:
+                        if 'befores' in parent:
+                            for before in parent['befores']:
+                                document.add_paragraph('[Fixture] {}'.format(before['name']), style="Step")
+                                print_attachments(document, before)
+                                print_steps(document, before, 1)
+                    if document.paragraphs[-1].text == "Test Setup":
+                        document.add_paragraph('No test setup information available.')
+
+                    document.add_heading('Test Body', level=2)
+                    print_attachments(document, test)
+                    print_steps(document, test)
+                    if document.paragraphs[-1].text == "Test Body":
+                        document.add_paragraph('No test body information available.')
+
+                    document.add_heading('Test Teardown', level=2)
+                    for parent in test['parents']:
+                        if 'afters' in parent:
+                            for after in parent['afters']:
+                                document.add_paragraph('[Fixture] {}'.format(after['name']), style="Step")
+                                print_attachments(document, after)
+                                print_steps(document, after, 1)
+                    if document.paragraphs[-1].text == "Test Teardown":
+                        document.add_paragraph('No test teardown information available.')
+
+                    document.add_page_break()
 
     document.save(output_path)
 
 
-def run(alluredir, template_path, output_filename, title, logo_path, logo_height):
+def run(alluredir, template_path, output_filename, title, logo_path, logo_height, detail_level):
     results, session = build_data(alluredir)
 
     imgfile = os.path.join(session['alluredir'], "pie.png")
     session['piechart_source'] = imgfile
     piechart.create_piechart(session["results"], imgfile)
 
-    create_docx(results, session, template_path, output_filename, title, logo_path, logo_height)
+    create_docx(results, session, template_path, output_filename, title, logo_path, logo_height, detail_level)
 
 
 
