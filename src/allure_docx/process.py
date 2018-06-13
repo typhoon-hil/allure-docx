@@ -3,6 +3,7 @@ from os import listdir
 from os.path import join, isfile
 from time import ctime
 from datetime import timedelta
+import warnings
 
 import json
 
@@ -106,6 +107,8 @@ def build_data(alluredir):
                     for after in container['afters']:
                         _process_steps(session, after)
 
+    if session['total'] == 0:
+        warnings.warn("No test result files were found!")
 
     def getsortingkey(d):
         classification = {"broken": 0,
@@ -126,7 +129,10 @@ def build_data(alluredir):
         session['stop'] = "Not available"
 
     for item in session['results']:
-        session['results_relative'][item] = "{:.2f}%".format(100*session['results'][item]/session['total'])
+        if session['total'] > 0:
+            session['results_relative'][item] = "{:.2f}%".format(100*session['results'][item]/session['total'])
+        else:
+            session['results_relative'][item] = "Not available"
 
     return sorted_results, session
 
