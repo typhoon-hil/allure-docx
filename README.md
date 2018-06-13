@@ -52,6 +52,8 @@ On Windows and Linux, PDFs can be generated using `LibreOfficeToPDF` application
 
 https://github.com/typhoon-hil/LibreOfficeToPDF/releases
 
+If both `OfficeToPDF` and `LibreOfficeToPDF` are present, `OfficeToPDF` will be used.
+
 ### Custom Title and Logo
 You can use the `--title` option to customize the docx report title.
  
