@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.1.3] - 2018-06-13
 ### Fixed
-- Gracefully treating cases where no test results are found (avoids `ZeroDivisionError`, Issue #15).
+- Gracefjully treating cases where no test results are found (avoids `ZeroDivisionError`, Issue #15).
 
 ## [0.1.2] - 2018-05-30
 ### Fixed
