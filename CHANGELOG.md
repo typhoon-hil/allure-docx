@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2018-07-08
+### Added 
+- Cairo DLL is now bundled inside the executable.
+### Fixed
+- Issues with `statusDetails` without `message` or `trace` attributes (issue #16).
+
 ## [0.2.0] - 2018-06-13
 ### Added
 - Command line options to control level of details in the generated docx report (issue #14).
