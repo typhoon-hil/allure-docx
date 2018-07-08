@@ -187,11 +187,13 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                     for p in step['parameters']:
                         paragraph = document.add_paragraph("{}    ".format(indent_str), style='Step Param Parag')
                         paragraph.add_run("{} = {}".format(p['name'], _format_argval(p['value'])), style='Step Param')
-                if 'statusDetails' in step:
-                    document.add_paragraph(step['statusDetails']['message'], style=stepstyle)
-                    table = document.add_table(rows=1, cols=1, style="Trace table")
-                    hdr_cells = table.rows[0].cells
-                    hdr_cells[0].add_paragraph(step['statusDetails']['trace']+'\n', style='Code')
+                if 'statusDetails' in step and ('message' in step['statusDetails'] or 'trace' in step['statusDetails']):
+                    if 'message' in step['statusDetails']:
+                        document.add_paragraph(step['statusDetails']['message'], style=stepstyle)
+                    if 'trace' in step['statusDetails']:
+                        table = document.add_table(rows=1, cols=1, style="Trace table")
+                        hdr_cells = table.rows[0].cells
+                        hdr_cells[0].add_paragraph(step['statusDetails']['trace']+'\n', style='Code')
                 print_attachments(document, step)
                 print_steps(document, step, indent+1)
 
@@ -248,16 +250,18 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                 for p in test['parameters']:
                     document.add_paragraph("{}: {}".format(p['name'], p['value']), style='Step')
 
-            if 'statusDetails' in test:
+            if 'statusDetails' in test and ('message' in test['statusDetails'] or 'trace' in test['statusDetails']):
                 document.add_heading('Details', level=2)
                 if test['status'] in ["failed", "broken"]:
                     style = "Normal Failed"
                 else:
                     style = None
-                document.add_paragraph(test['statusDetails']['message'], style=style)
-                table = document.add_table(rows=1, cols=1, style="Trace table")
-                hdr_cells = table.rows[0].cells
-                hdr_cells[0].add_paragraph(test['statusDetails']['trace']+'\n', style='Code')
+                if 'message' in test['statusDetails']:
+                    document.add_paragraph(test['statusDetails']['message'], style=style)
+                if 'trace' in test['statusDetails']:
+                    table = document.add_table(rows=1, cols=1, style="Trace table")
+                    hdr_cells = table.rows[0].cells
+                    hdr_cells[0].add_paragraph(test['statusDetails']['trace']+'\n', style='Code')
 
             if not detail_level == "compact":
                 if (detail_level == "full") or (detail_level == "full_onfail" and test['status'] in ['failed', 'broken']):
