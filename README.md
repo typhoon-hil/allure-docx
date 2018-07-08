@@ -1,8 +1,5 @@
 # allure-docx
-docx report generation based on allure-generated result files using `python-docx` library:
-https://python-docx.readthedocs.io/en/latest/
-
-Currently tested only with Python 3.6
+DOCX and PDF report generation based on allure-generated result files.
 
 ## Limitations
 
