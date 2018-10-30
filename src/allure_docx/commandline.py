@@ -17,7 +17,7 @@ else :
 # Add local folder with cairo.dll to PATH
 cairo_path = os.path.join(template_dir, "cairo")
 assert os.path.exists(cairo_path)
-os.environ['PATH'] += cairo_path
+os.environ['PATH'] = cairo_path + os.pathsep + os.environ['PATH']
 
 cwd = os.getcwd()
 
