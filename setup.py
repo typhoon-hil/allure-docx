@@ -8,7 +8,7 @@ setup(
     name="allure-docx",
     description="docx report generator based on allure-generated json files",
     author="Victor Maryama (Typhoon HIL, Inc)",
-    version="0.3.1",
+    version="0.3.2",
     license="MIT",
     install_requires=requirements,
 
