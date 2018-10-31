@@ -63,4 +63,9 @@ We use PyInstaller to create standalone executables. If you want to build an exe
 - Delete any previous `dist` folder from a previous PyInstaller run
 - Run the `build_exe.cmd` command to run PyInstaller and create a single file executable.
 
+If having the following error:
+
+`ImportError: This package should not be accessible on Python 3. Either you are trying to run from the python-future src folder or your installation of python-future is corrupted.`
+
+Run `pip install --force-reinstall -U future` (https://github.com/nipy/nipype/issues/2646)
 
