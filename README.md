@@ -13,11 +13,21 @@ Feel free to open an issue ticket with any problems or questions. Please if poss
 
 ## Installation
 
+# Windows
+
 We publish windows standalone executable files. With them you can use it without having to install anything else other than the cairo dlls, meaning no installing python, etc.
 
 You can download them at: https://github.com/typhoon-hil/allure-docx/releases
 
 Then you can use the executable directly (possibly adding it a folder added to PATH).
+
+# Linux
+
+You can install from source using:
+
+`pip install git+https://github.com/typhoon-hil/allure-docx.git`
+
+Then you should be able to use `allure-docx` executable like you use `pip`.
 
 ## Usage
 
