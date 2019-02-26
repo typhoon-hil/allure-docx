@@ -1,5 +1,2 @@
-git+https://github.com/pyinstaller/pyinstaller.git
-Click
-python-docx
-cairosvg
-pygal
+git+https://github.com/pyinstaller/pyinstaller.git#egg=pyinstaller
+-e file:.[dev]
