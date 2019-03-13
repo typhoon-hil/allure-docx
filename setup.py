@@ -1,16 +1,21 @@
 from setuptools import setup, find_packages
 
 
-with open("requirements.txt", "r") as file:
-    requirements = file.read().splitlines()
-
 setup(
     name="allure-docx",
     description="docx report generator based on allure-generated json files",
     author="Victor Maryama (Typhoon HIL, Inc)",
     version="0.3.2",
     license="MIT",
-    install_requires=requirements,
+    install_requires=[
+        'cairosvg',
+        'click',
+        'pygal',
+        'python-docx',
+    ],
+    extras_require={
+        'dev': ['pyinstaller'],
+    },
 
     packages=find_packages('src'),
     package_dir={'': 'src'},
