@@ -1,3 +1,6 @@
+ATTENTION: THIS PACKAGE IS NOT OFFICIALLY SUPPORTED BY TYPHOON HIL AND IS STILL ON ALPHA STAGE.
+Users are welcome to test and report problems and suggestions by creating an issue.
+
 # allure-docx
 DOCX and PDF report generation based on allure-generated result files.
 
