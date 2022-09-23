@@ -187,7 +187,7 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                     for p in step['parameters']:
                         paragraph = document.add_paragraph("{}    ".format(indent_str), style='Step Param Parag')
                         paragraph.add_run("{} = {}".format(p['name'], _format_argval(p['value'])), style='Step Param')
-                if 'statusDetails' in step and ('message' in step['statusDetails'] or 'trace' in step['statusDetails']):
+                if 'statusDetails' in step and len(step['statusDetails']) != 0 and ('message' in step['statusDetails'] and len(step['statusDetails']) != 0 or ('trace' in step['statusDetails'] and detail_level != "shipping")):
                     if 'message' in step['statusDetails']:
                         document.add_paragraph(step['statusDetails']['message'], style=stepstyle)
                     if 'trace' in step['statusDetails']:
@@ -238,32 +238,48 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
         document.add_page_break()
 
         for test in sorted_results:
-            document.add_heading('{} - {}'.format(test['name'], test['status']), level=1)
+            document.add_paragraph('{} - {}'.format(test['name'], test['status']), style="Heading {}".format(test['status']))
 
-            if 'description' in test:
+            duration = test['stop'] - test['start']
+            duration_unit = "ms"
+            if duration > 1000:
+                duration_unit = "s"
+                duration = duration / 1000
+            if duration > 60000:
+                duration_unit = "min"
+                duration = duration / 60000
+            document.add_paragraph('Duration: {}{}'.format(duration, duration_unit))
+
+            severity = next((label for label in test['labels'] if label['name'] == 'severity'), None)
+            if severity is not None:
+                document.add_paragraph('Severity: {}'.format(severity['value']))
+
+            document.add_heading('Description', level=2)
+            if 'description' in test and len(test['description']) != 0:
                 document.add_paragraph(test['description'])
             else:
                 document.add_paragraph('No description available.')
 
-            if 'parameters' in test:
+            if 'parameters' in test and len(test['parameters']) != 0:
                 document.add_heading('Parameters', level=2)
                 for p in test['parameters']:
                     document.add_paragraph("{}: {}".format(p['name'], p['value']), style='Step')
 
-            if 'statusDetails' in test and ('message' in test['statusDetails'] or 'trace' in test['statusDetails']):
+            if 'statusDetails' in test and len(test['statusDetails']) != 0 and ('message' in test['statusDetails'] and len(test['statusDetails']['message']) != 0 or 'trace' in test['statusDetails'] and detail_level != "shipping"):
                 document.add_heading('Details', level=2)
-                if test['status'] in ["failed", "broken"]:
-                    style = "Normal Failed"
-                else:
-                    style = None
                 if 'message' in test['statusDetails']:
-                    document.add_paragraph(test['statusDetails']['message'], style=style)
-                if 'trace' in test['statusDetails']:
+                    document.add_paragraph(test['statusDetails']['message'], style=None)
+                if not detail_level == "shipping" and 'trace' in test['statusDetails']:
                     table = document.add_table(rows=1, cols=1, style="Trace table")
                     hdr_cells = table.rows[0].cells
                     hdr_cells[0].add_paragraph(test['statusDetails']['trace']+'\n', style='Code')
 
-            if not detail_level == "compact":
+            if 'links' in test and len(test['links']) != 0:
+                document.add_heading('Links', level=2)
+                for link in test['links']:
+                    document.add_paragraph('{}: {}'.format(link['name'], link['url']))
+
+            if not detail_level == "compact" and not detail_level == "shipping":
                 if (detail_level == "full") or (detail_level == "full_onfail" and test['status'] in ['failed', 'broken']):
                     document.add_heading('Test Setup', level=2)
                     for parent in test['parents']:
