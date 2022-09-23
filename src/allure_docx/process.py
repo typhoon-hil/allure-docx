@@ -245,10 +245,10 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
             if duration > 1000:
                 duration_unit = "s"
                 duration = duration / 1000
-            if duration > 60000:
-                duration_unit = "min"
-                duration = duration / 60000
-            document.add_paragraph('Duration: {}{}'.format(duration, duration_unit))
+                if duration > 60:
+                    duration_unit = "min"
+                    duration = duration / 60
+            document.add_paragraph('Duration: {}{}'.format(round(duration, 2), duration_unit))
 
             severity = next((label for label in test['labels'] if label['name'] == 'severity'), None)
             if severity is not None:
