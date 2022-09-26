@@ -24,6 +24,7 @@ def _format_argval(argval):
 
     From Allure-pytest logger (formats argument in the CLI live logs).
     Consider using the same function."""
+
     MAX_ARG_LENGTH = 100
     argval = argval.replace("\n"," ")
     if len(argval) > MAX_ARG_LENGTH:
@@ -277,7 +278,10 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
             if 'links' in test and len(test['links']) != 0:
                 document.add_heading('Links', level=2)
                 for link in test['links']:
-                    document.add_paragraph('{}: {}'.format(link['name'], link['url']))
+                    if 'name' in link and 'url' in link:
+                        document.add_paragraph('{}: {}'.format(link['name'], link['url']))
+                    else:
+                        print("WARNING: A link was provided without name or url and will not be printed.")
 
             if not detail_level == "compact" and not detail_level == "shipping":
                 if (detail_level == "full") or (detail_level == "full_onfail" and test['status'] in ['failed', 'broken']):
