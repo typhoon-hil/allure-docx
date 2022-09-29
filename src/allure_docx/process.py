@@ -138,7 +138,7 @@ def build_data(alluredir):
     return sorted_results, session
 
 
-def create_docx(sorted_results, session, template_path, output_path, title, logo_path, logo_height, detail_level):
+def create_docx(sorted_results, session, template_path, output_path, title, logo_path, logo_height, detail_level, labels):
 
     def create_TOC(document):
         # Snippet from:
@@ -249,11 +249,23 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                 if duration > 60:
                     duration_unit = "min"
                     duration = duration / 60
-            document.add_paragraph('Duration: {}{}'.format(round(duration, 2), duration_unit))
+
+            table = document.add_table(rows=1, cols=2)
+            table.rows[0].cells[0].add_paragraph('Duration')
+            table.rows[0].cells[1].add_paragraph(str(duration) + duration_unit)
 
             severity = next((label for label in test['labels'] if label['name'] == 'severity'), None)
             if severity is not None:
-                document.add_paragraph('Severity: {}'.format(severity['value']))
+                row = table.add_row()
+                row.cells[0].add_paragraph('Severity')
+                row.cells[1].add_paragraph(severity['value'])
+
+            for label_name in labels:
+                label = next((label for label in test['labels'] if label['name'] == label_name), None)
+                if label is not None:
+                    row = table.add_row()
+                    row.cells[0].add_paragraph(label_name.capitalize())
+                    row.cells[1].add_paragraph(label['value'])
 
             document.add_heading('Description', level=2)
             if 'description' in test and len(test['description']) != 0:
@@ -316,14 +328,14 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
     document.save(output_path)
 
 
-def run(alluredir, template_path, output_filename, title, logo_path, logo_height, detail_level):
+def run(alluredir, template_path, output_filename, title, logo_path, logo_height, detail_level, labels):
     results, session = build_data(alluredir)
 
     imgfile = os.path.join(session['alluredir'], "pie.png")
     session['piechart_source'] = imgfile
     piechart.create_piechart(session["results"], imgfile)
 
-    create_docx(results, session, template_path, output_filename, title, logo_path, logo_height, detail_level)
+    create_docx(results, session, template_path, output_filename, title, logo_path, logo_height, detail_level, labels)
 
 
 

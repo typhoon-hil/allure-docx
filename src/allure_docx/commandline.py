@@ -4,6 +4,14 @@ import os
 import click
 import sys
 import shutil
+import ast
+
+class PythonLiteralOption(click.Option):
+    def type_cast_value(self, ctx, value):
+        try:
+            return ast.literal_eval(value)
+        except:
+            raise click.BadParameter(value)
 
 
 template_dir = None
@@ -22,14 +30,17 @@ cwd = os.getcwd()
 @click.argument('output')
 @click.option('--template', default=None, help='Path (absolute or relative) to a custom docx template file with styles')
 @click.option('--detail-level', type=click.Choice(['full', 'full_onfail', 'compact', 'shipping']), default="full", help="Level of detail in the docx report.")
+@click.option('--labels', cls=PythonLiteralOption, default='[]', help="Show specified list of labels. Use like: --labels \"['label1', 'label2']\"")
 @click.option('--pdf', is_flag=True, help='Try to generate a pdf file from created docx using LibreOfficeToPDF or OfficeToPDF (needs MS Word installed)')
 @click.option('--title', default=None, help='Custom report title')
 @click.option('--logo', default=None, help='Path to custom report logo image')
 @click.option('--logo-height', default=None, help='Image height in centimeters. Width is scaled to keep aspect ratio')
-def main(alluredir, output, template, pdf, title, logo, logo_height, detail_level):
+def main(alluredir, output, template, pdf, title, logo, logo_height, detail_level, labels):
     """alluredir: Path (relative or absolute) to alluredir folder with test results
 
     output: Path (relative or absolute) with filename for the generated docx file"""
+    if isinstance(labels, str):
+        labels = [labels]
     if not os.path.isabs(alluredir):
         alluredir = os.path.join(cwd, alluredir)
     if not os.path.isabs(output):
@@ -43,7 +54,7 @@ def main(alluredir, output, template, pdf, title, logo, logo_height, detail_leve
 
     if logo_height is not None:
         logo_height = float(logo_height)
-    process.run(alluredir, template, output, title, logo, logo_height, detail_level)
+    process.run(alluredir, template, output, title, logo, logo_height, detail_level, labels)
 
     if pdf:
         filepath, ext = os.path.splitext(output)
