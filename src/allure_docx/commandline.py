@@ -58,17 +58,11 @@ def main(alluredir, output, template, pdf, title, logo, logo_height, config):
         filepath, ext = os.path.splitext(output)
         output_pdf = filepath+".pdf"
         officetopdf = shutil.which("OfficeToPDF")
-        libreofficetopdf = shutil.which("LibreOfficeToPDF")
         soffice = shutil.which("soffice")
 
         if officetopdf is not None:
             print("Found OfficeToPDF, using it. Make sure you have MS Word installed.")
             proc = subprocess.run([officetopdf, "/bookmarks", "/print", output, output_pdf], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            print(proc.stdout.decode())
-            sys.exit(proc.returncode)
-        elif libreofficetopdf is not None:
-            print("Found LibreOfficeToPDF, using it. Make sure you have LibreOffice installed.")
-            proc = subprocess.run([libreofficetopdf, output], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             print(proc.stdout.decode())
             sys.exit(proc.returncode)
         elif soffice is not None:
@@ -77,7 +71,7 @@ def main(alluredir, output, template, pdf, title, logo, logo_height, config):
             subprocess.call(['soffice', '--convert-to', 'pdf', '--outdir', result_dir, doc_path])
             return doc_path
         else:
-            print("Could not find neither OfficeToPDF nor LibreOfficeToPDF. Not generating PDF.")
+            print("Could not find neither OfficeToPDF nor soffice. Not generating PDF.")
             sys.exit(1)
 
 
