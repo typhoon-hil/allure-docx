@@ -32,6 +32,7 @@ def _format_argval(argval):
         argval = argval[:3] + " ... " + argval[-MAX_ARG_LENGTH:]
     return argval
 
+
 def get_config_from_file(path):
     def transform_by_status_to_dict(config, section):
         section_old = config[section]
@@ -51,7 +52,7 @@ def get_config_from_file(path):
     try:
         config_parser = ConfigParser()
         config_parser.read(path)
-        config = {s:dict(config_parser.items(s)) for s in config_parser.sections()}
+        config = {s: dict(config_parser.items(s)) for s in config_parser.sections()}
         transform_by_status_to_dict(config, "info")
         transform_by_status_to_dict(config, "labels")
         return config
@@ -216,7 +217,8 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                         paragraph.add_run("{} = {}".format(p['name'], _format_argval(p['value'])), style='Step Param')
                 if config_info['details'] and 'statusDetails' in step and len(step['statusDetails']) != 0 \
                         and ('message' in step['statusDetails'] and len(step['statusDetails']['message']) != 0
-                             or config_info['trace'] and 'trace' in step['statusDetails'] and len(step['statusDetails']['trace']) != 0):
+                             or config_info['trace'] and 'trace' in step['statusDetails'] and len(
+                            step['statusDetails']['trace']) != 0):
                     if 'message' in step['statusDetails']:
                         document.add_paragraph(step['statusDetails']['message'], style=stepstyle)
                     if config_info['trace'] and 'trace' in step['statusDetails']:
@@ -304,7 +306,7 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                 if config_labels[label_name] == 1:
                     if not added_table:
                         table = document.add_table(rows=0, cols=2, style="Label table")
-                        added_table = False
+                        added_table = True
                     iterator = iter(label for label in test['labels'] if label['name'].lower() == label_name)
                     label = next(iterator, None)
                     if label is not None:
@@ -319,6 +321,9 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                 table.columns[0].width = Cm(4)
                 for cell in table.columns[0].cells:
                     cell.width = Cm(4)
+                table.columns[1].width = Cm(12)
+                for cell in table.columns[1].cells:
+                    cell.width = Cm(12)
 
             if config_info['description']:
                 document.add_heading('Description', level=2)
@@ -399,8 +404,8 @@ def run(alluredir, template_path, output_filename, title, logo_path, logo_height
         config_path = script_path + "/config/full_on_fail.ini"
     elif config_option == "compact":
         config_path = script_path + "/config/compact.ini"
-    elif config_option == "shipping":
-        config_path = script_path + "/config/shipping.ini"
+    elif config_option == "no_trace":
+        config_path = script_path + "/config/no_trace.ini"
     config = get_config_from_file(config_path)
 
     create_docx(results, session, template_path, output_filename, title, logo_path, logo_height, config)
