@@ -1,4 +1,5 @@
 import os
+from configparser import ConfigParser
 from os import listdir
 from os.path import join, isfile
 from time import ctime
@@ -12,9 +13,9 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+from docx.shared import Cm
 
 from . import piechart
-
 
 INDENT = 6
 
@@ -26,14 +27,40 @@ def _format_argval(argval):
     Consider using the same function."""
 
     MAX_ARG_LENGTH = 100
-    argval = argval.replace("\n"," ")
+    argval = argval.replace("\n", " ")
     if len(argval) > MAX_ARG_LENGTH:
-        argval = argval[:3]+" ... "+argval[-MAX_ARG_LENGTH:]
+        argval = argval[:3] + " ... " + argval[-MAX_ARG_LENGTH:]
     return argval
+
+def get_config_from_file(path):
+    def transform_by_status_to_dict(config, section):
+        section_old = config[section]
+        config[section] = {}
+        config[section]['failed'] = {}
+        config[section]['broken'] = {}
+        config[section]['passed'] = {}
+        config[section]['skipped'] = {}
+        config[section]['unknown'] = {}
+        for key in section_old:
+            config[section]['failed'][key] = int(section_old[key][0])
+            config[section]['broken'][key] = int(section_old[key][1])
+            config[section]['passed'][key] = int(section_old[key][2])
+            config[section]['skipped'][key] = int(section_old[key][3])
+            config[section]['unknown'][key] = int(section_old[key][4])
+
+    try:
+        config_parser = ConfigParser()
+        config_parser.read(path)
+        config = {s:dict(config_parser.items(s)) for s in config_parser.sections()}
+        transform_by_status_to_dict(config, "info")
+        transform_by_status_to_dict(config, "labels")
+        return config
+    except Exception as e:
+        print("Failed to read config file: " + str(e))
+        exit(-1)
 
 
 def build_data(alluredir):
-
     def _process_steps(session, node):
         if 'start' in node:
             if session['start'] is None or node['start'] < session['start']:
@@ -79,7 +106,7 @@ def build_data(alluredir):
             result["_lastmodified"] = os.path.getmtime(join(alluredir, file))
 
             skip = False
-            for previous_item in list(data_results): # copy
+            for previous_item in list(data_results):  # copy
                 if previous_item["name"] == result["name"]:
                     if previous_item["_lastmodified"] > result["_lastmodified"]:
                         skip = True
@@ -121,9 +148,9 @@ def build_data(alluredir):
     sorted_results = sorted(data_results, key=getsortingkey)
 
     if session['start'] is not None:
-        session['duration'] = str(timedelta(seconds=(session['stop']-session['start'])/1000.0))
-        session['start'] = ctime(session['start']/1000.0)
-        session['stop'] = ctime(session['stop']/1000.0)
+        session['duration'] = str(timedelta(seconds=(session['stop'] - session['start']) / 1000.0))
+        session['start'] = ctime(session['start'] / 1000.0)
+        session['stop'] = ctime(session['stop'] / 1000.0)
     else:
         session['duration'] = "Not available"
         session['start'] = "Not available"
@@ -131,15 +158,14 @@ def build_data(alluredir):
 
     for item in session['results']:
         if session['total'] > 0:
-            session['results_relative'][item] = "{:.2f}%".format(100*session['results'][item]/session['total'])
+            session['results_relative'][item] = "{:.2f}%".format(100 * session['results'][item] / session['total'])
         else:
             session['results_relative'][item] = "Not available"
 
     return sorted_results, session
 
 
-def create_docx(sorted_results, session, template_path, output_path, title, logo_path, logo_height, detail_level, labels):
-
+def create_docx(sorted_results, session, template_path, output_path, title, logo_path, logo_height, config):
     def create_TOC(document):
         # Snippet from:
         # https://github.com/python-openxml/python-docx/issues/36
@@ -149,7 +175,7 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
         fldChar.set(qn('w:fldCharType'), 'begin')  # sets attribute on element
         instrText = OxmlElement('w:instrText')
         instrText.set(qn('xml:space'), 'preserve')  # sets attribute on element
-        instrText.text = 'TOC \\o "1-1" \\h \\z'   # change 1-3 depending on heading levels you need
+        instrText.text = 'TOC \\o "1-1" \\h \\z'  # change 1-3 depending on heading levels you need
 
         fldChar2 = OxmlElement('w:fldChar')
         fldChar2.set(qn('w:fldCharType'), 'separate')
@@ -175,28 +201,36 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                     document.add_picture(os.path.join(session['alluredir'], attachment['source']), width=Mm(100))
                     document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    def print_steps(document, parent_step, indent=0):
-        indent_str = indent*INDENT*" "
+    def print_steps(document, parent_step, config_info, indent=0):
+        indent_str = indent * INDENT * " "
         if 'steps' in parent_step:
             for step in parent_step['steps']:
                 if step['status'] in ["failed", "broken"]:
                     stepstyle = "Step Failed"
                 else:
                     stepstyle = "Step"
-                document.add_paragraph("{}> {}".format(indent_str,step['name']), style=stepstyle)
-                if 'parameters' in step:
+                document.add_paragraph("{}> {}".format(indent_str, step['name']), style=stepstyle)
+                if config_info['parameters'] and 'parameters' in step:
                     for p in step['parameters']:
                         paragraph = document.add_paragraph("{}    ".format(indent_str), style='Step Param Parag')
                         paragraph.add_run("{} = {}".format(p['name'], _format_argval(p['value'])), style='Step Param')
-                if 'statusDetails' in step and len(step['statusDetails']) != 0 and ('message' in step['statusDetails'] and len(step['statusDetails']) != 0 or ('trace' in step['statusDetails'] and detail_level != "shipping")):
+                if config_info['details'] and 'statusDetails' in step and len(step['statusDetails']) != 0 \
+                        and ('message' in step['statusDetails'] and len(step['statusDetails']['message']) != 0
+                             or config_info['trace'] and 'trace' in step['statusDetails'] and len(step['statusDetails']['trace']) != 0):
                     if 'message' in step['statusDetails']:
                         document.add_paragraph(step['statusDetails']['message'], style=stepstyle)
-                    if 'trace' in step['statusDetails']:
+                    if config_info['trace'] and 'trace' in step['statusDetails']:
                         table = document.add_table(rows=1, cols=1, style="Trace table")
                         hdr_cells = table.rows[0].cells
-                        hdr_cells[0].add_paragraph(step['statusDetails']['trace']+'\n', style='Code')
-                print_attachments(document, step)
-                print_steps(document, step, indent+1)
+                        hdr_cells[0].add_paragraph(step['statusDetails']['trace'] + '\n', style='Code')
+                if config_info['attachments']:
+                    print_attachments(document, step)
+                print_steps(document, step, config_info, indent + 1)
+
+    def delete_paragraph(paragraph):
+        p = paragraph._element
+        p.getparent().remove(p)
+        p._p = p._element = None
 
     document = Document(template_path)
 
@@ -221,7 +255,8 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
     else:
         table = document.add_table(rows=1, cols=2)
         summary_cell = table.rows[0].cells[0]
-        summary_cell.add_paragraph('Start: {}\nEnd: {}\nDuration: {}'.format(session['start'], session['stop'], session['duration']))
+        summary_cell.add_paragraph(
+            'Start: {}\nEnd: {}\nDuration: {}'.format(session['start'], session['stop'], session['duration']))
 
         results_strs = []
         for item in session['results']:
@@ -238,56 +273,77 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
 
         document.add_page_break()
 
+        # print tests
         for test in sorted_results:
-            document.add_paragraph('{} - {}'.format(test['name'], test['status']), style="Heading {}".format(test['status']))
+            # config elements for the specific status of this test
+            config_info = config['info'][test['status']]
+            config_labels = config['labels'][test['status']]
 
-            duration = test['stop'] - test['start']
-            duration_unit = "ms"
-            if duration > 1000:
-                duration_unit = "s"
-                duration = duration / 1000
-                if duration > 60:
-                    duration_unit = "min"
-                    duration = duration / 60
+            document.add_paragraph('{}  [ {} ]'.format(test['name'], test['status']),
+                                   style="Heading {}".format(test['status']))
 
-            table = document.add_table(rows=1, cols=2)
-            table.rows[0].cells[0].add_paragraph('Duration')
-            table.rows[0].cells[1].add_paragraph(str(duration) + duration_unit)
+            table = None
+            added_table = False
+            if config_info['duration']:
+                duration = test['stop'] - test['start']
+                duration_unit = "ms"
+                if duration > 1000:
+                    duration_unit = "s"
+                    duration = duration / 1000
+                    if duration > 60:
+                        duration_unit = "min"
+                        duration = duration / 60
 
-            severity = next((label for label in test['labels'] if label['name'] == 'severity'), None)
-            if severity is not None:
-                row = table.add_row()
-                row.cells[0].add_paragraph('Severity')
-                row.cells[1].add_paragraph(severity['value'])
+                table = document.add_table(rows=1, cols=2, style="Label table")
+                table.rows[0].cells[0].paragraphs[-1].clear().add_run("Duration")
+                table.rows[0].cells[1].paragraphs[-1].clear().add_run(str(duration) + duration_unit)
+                added_table = True
 
-            for label_name in labels:
-                label = next((label for label in test['labels'] if label['name'] == label_name), None)
-                if label is not None:
-                    row = table.add_row()
-                    row.cells[0].add_paragraph(label_name.capitalize())
-                    row.cells[1].add_paragraph(label['value'])
+            # add labels to table
+            for label_name in config_labels:
+                if config_labels[label_name] == 1:
+                    if not added_table:
+                        table = document.add_table(rows=0, cols=2, style="Label table")
+                        added_table = False
+                    iterator = iter(label for label in test['labels'] if label['name'].lower() == label_name)
+                    label = next(iterator, None)
+                    if label is not None:
+                        row = table.add_row()
+                        row.cells[0].paragraphs[-1].clear().add_run(label_name.capitalize())
+                        while label is not None:
+                            row.cells[1].add_paragraph(label['value'])
+                            label = next(iterator, None)
+                        delete_paragraph(row.cells[1].paragraphs[0])
 
-            document.add_heading('Description', level=2)
-            if 'description' in test and len(test['description']) != 0:
-                document.add_paragraph(test['description'])
-            else:
-                document.add_paragraph('No description available.')
+            if table is not None:
+                table.columns[0].width = Cm(4)
+                for cell in table.columns[0].cells:
+                    cell.width = Cm(4)
 
-            if 'parameters' in test and len(test['parameters']) != 0:
+            if config_info['description']:
+                document.add_heading('Description', level=2)
+                if 'description' in test and len(test['description']) != 0:
+                    document.add_paragraph(test['description'])
+                else:
+                    document.add_paragraph('No description available.')
+
+            if config_info['parameters'] and 'parameters' in test and len(test['parameters']) != 0:
                 document.add_heading('Parameters', level=2)
                 for p in test['parameters']:
                     document.add_paragraph("{}: {}".format(p['name'], p['value']), style='Step')
 
-            if 'statusDetails' in test and len(test['statusDetails']) != 0 and ('message' in test['statusDetails'] and len(test['statusDetails']['message']) != 0 or 'trace' in test['statusDetails'] and detail_level != "shipping"):
+            if config_info['details'] and 'statusDetails' in test and len(test['statusDetails']) != 0 \
+                    and ('message' in test['statusDetails'] and len(test['statusDetails']['message']) != 0
+                         or config_info['trace'] and 'trace' in test['statusDetails']):
                 document.add_heading('Details', level=2)
                 if 'message' in test['statusDetails']:
                     document.add_paragraph(test['statusDetails']['message'], style=None)
-                if not detail_level == "shipping" and 'trace' in test['statusDetails']:
+                if config_info['trace'] and 'trace' in test['statusDetails']:
                     table = document.add_table(rows=1, cols=1, style="Trace table")
                     hdr_cells = table.rows[0].cells
-                    hdr_cells[0].add_paragraph(test['statusDetails']['trace']+'\n', style='Code')
+                    hdr_cells[0].add_paragraph(test['statusDetails']['trace'] + '\n', style='Code')
 
-            if 'links' in test and len(test['links']) != 0:
+            if config_info['links'] and 'links' in test and len(test['links']) != 0:
                 document.add_heading('Links', level=2)
                 for link in test['links']:
                     if 'name' in link and 'url' in link:
@@ -295,47 +351,56 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                     else:
                         print("WARNING: A link was provided without name or url and will not be printed.")
 
-            if not detail_level == "compact" and not detail_level == "shipping":
-                if (detail_level == "full") or (detail_level == "full_onfail" and test['status'] in ['failed', 'broken']):
-                    document.add_heading('Test Setup', level=2)
-                    for parent in test['parents']:
-                        if 'befores' in parent:
-                            for before in parent['befores']:
-                                document.add_paragraph('[Fixture] {}'.format(before['name']), style="Step")
-                                print_attachments(document, before)
-                                print_steps(document, before, 1)
-                    if document.paragraphs[-1].text == "Test Setup":
-                        document.add_paragraph('No test setup information available.')
+            if config_info['setup']:
+                document.add_heading('Test Setup', level=2)
+                for parent in test['parents']:
+                    if 'befores' in parent:
+                        for before in parent['befores']:
+                            document.add_paragraph('[Fixture] {}'.format(before['name']), style="Step")
+                            print_attachments(document, before)
+                            print_steps(document, before, config_info, 1)
+                if document.paragraphs[-1].text == "Test Setup":
+                    delete_paragraph(document.paragraphs[-1])
 
-                    document.add_heading('Test Body', level=2)
-                    print_attachments(document, test)
-                    print_steps(document, test)
-                    if document.paragraphs[-1].text == "Test Body":
-                        document.add_paragraph('No test body information available.')
+            if config_info['body']:
+                document.add_heading('Test Body', level=2)
+                print_attachments(document, test)
+                print_steps(document, test, config_info)
+                if document.paragraphs[-1].text == "Test Body":
+                    delete_paragraph(document.paragraphs[-1])
 
-                    document.add_heading('Test Teardown', level=2)
-                    for parent in test['parents']:
-                        if 'afters' in parent:
-                            for after in parent['afters']:
-                                document.add_paragraph('[Fixture] {}'.format(after['name']), style="Step")
-                                print_attachments(document, after)
-                                print_steps(document, after, 1)
-                    if document.paragraphs[-1].text == "Test Teardown":
-                        document.add_paragraph('No test teardown information available.')
+            if config_info['teardown']:
+                document.add_heading('Test Teardown', level=2)
+                for parent in test['parents']:
+                    if 'afters' in parent:
+                        for after in parent['afters']:
+                            document.add_paragraph('[Fixture] {}'.format(after['name']), style="Step")
+                            print_attachments(document, after)
+                            print_steps(document, after, config_info, 1)
+                if document.paragraphs[-1].text == "Test Teardown":
+                    delete_paragraph(document.paragraphs[-1])
 
-                    document.add_page_break()
+            # document.add_page_break()
 
     document.save(output_path)
 
 
-def run(alluredir, template_path, output_filename, title, logo_path, logo_height, detail_level, labels):
+def run(alluredir, template_path, output_filename, title, logo_path, logo_height, config_option):
     results, session = build_data(alluredir)
 
     imgfile = os.path.join(session['alluredir'], "pie.png")
     session['piechart_source'] = imgfile
     piechart.create_piechart(session["results"], imgfile)
+    config_path = config_option
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    if config_option == "full":
+        config_path = script_path + "/config/full.ini"
+    if config_option == "full_on_fail":
+        config_path = script_path + "/config/full_on_fail.ini"
+    elif config_option == "compact":
+        config_path = script_path + "/config/compact.ini"
+    elif config_option == "shipping":
+        config_path = script_path + "/config/shipping.ini"
+    config = get_config_from_file(config_path)
 
-    create_docx(results, session, template_path, output_filename, title, logo_path, logo_height, detail_level, labels)
-
-
-
+    create_docx(results, session, template_path, output_filename, title, logo_path, logo_height, config)

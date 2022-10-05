@@ -5,6 +5,7 @@ import click
 import sys
 import shutil
 import ast
+from docx2pdf import convert
 
 class PythonLiteralOption(click.Option):
     def type_cast_value(self, ctx, value):
@@ -29,18 +30,15 @@ cwd = os.getcwd()
 @click.argument('alluredir')
 @click.argument('output')
 @click.option('--template', default=None, help='Path (absolute or relative) to a custom docx template file with styles')
-@click.option('--detail-level', type=click.Choice(['full', 'full_onfail', 'compact', 'shipping']), default="full", help="Level of detail in the docx report.")
-@click.option('--labels', cls=PythonLiteralOption, default='[]', help="Show specified list of labels. Use like: --labels \"['label1', 'label2']\"")
+@click.option('--config', default="full", help="Configuration for the docx report. Options are: full, full_on_fail, compact, shipping. Alternatively path to custom .ini configuration file (see documentation).")
 @click.option('--pdf', is_flag=True, help='Try to generate a pdf file from created docx using LibreOfficeToPDF or OfficeToPDF (needs MS Word installed)')
 @click.option('--title', default=None, help='Custom report title')
 @click.option('--logo', default=None, help='Path to custom report logo image')
 @click.option('--logo-height', default=None, help='Image height in centimeters. Width is scaled to keep aspect ratio')
-def main(alluredir, output, template, pdf, title, logo, logo_height, detail_level, labels):
+def main(alluredir, output, template, pdf, title, logo, logo_height, config):
     """alluredir: Path (relative or absolute) to alluredir folder with test results
 
     output: Path (relative or absolute) with filename for the generated docx file"""
-    if isinstance(labels, str):
-        labels = [labels]
     if not os.path.isabs(alluredir):
         alluredir = os.path.join(cwd, alluredir)
     if not os.path.isabs(output):
@@ -54,13 +52,15 @@ def main(alluredir, output, template, pdf, title, logo, logo_height, detail_leve
 
     if logo_height is not None:
         logo_height = float(logo_height)
-    process.run(alluredir, template, output, title, logo, logo_height, detail_level, labels)
+    process.run(alluredir, template, output, title, logo, logo_height, config)
 
     if pdf:
         filepath, ext = os.path.splitext(output)
         output_pdf = filepath+".pdf"
         officetopdf = shutil.which("OfficeToPDF")
         libreofficetopdf = shutil.which("LibreOfficeToPDF")
+        soffice = shutil.which("soffice")
+
         if officetopdf is not None:
             print("Found OfficeToPDF, using it. Make sure you have MS Word installed.")
             proc = subprocess.run([officetopdf, "/bookmarks", "/print", output, output_pdf], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -71,6 +71,11 @@ def main(alluredir, output, template, pdf, title, logo, logo_height, detail_leve
             proc = subprocess.run([libreofficetopdf, output], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             print(proc.stdout.decode())
             sys.exit(proc.returncode)
+        elif soffice is not None:
+            result_dir = os.path.dirname(output)
+            doc_path = output
+            subprocess.call(['soffice', '--convert-to', 'pdf', '--outdir', result_dir, doc_path])
+            return doc_path
         else:
             print("Could not find neither OfficeToPDF nor LibreOfficeToPDF. Not generating PDF.")
             sys.exit(1)
