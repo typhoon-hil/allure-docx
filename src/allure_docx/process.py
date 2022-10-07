@@ -37,17 +37,22 @@ def get_config_from_file(path):
     def transform_by_status_to_dict(config, section):
         section_old = config[section]
         config[section] = {}
-        config[section]['failed'] = {}
-        config[section]['broken'] = {}
-        config[section]['passed'] = {}
-        config[section]['skipped'] = {}
-        config[section]['unknown'] = {}
+        config[section]['failed'] = []
+        config[section]['broken'] = []
+        config[section]['passed'] = []
+        config[section]['skipped'] = []
+        config[section]['unknown'] = []
         for key in section_old:
-            config[section]['failed'][key] = int(section_old[key][0])
-            config[section]['broken'][key] = int(section_old[key][1])
-            config[section]['passed'][key] = int(section_old[key][2])
-            config[section]['skipped'][key] = int(section_old[key][3])
-            config[section]['unknown'][key] = int(section_old[key][4])
+            if 'f' in section_old[key]:
+                config[section]['failed'].append(key)
+            if 'b' in section_old[key]:
+                config[section]['broken'].append(key)
+            if 'p' in section_old[key]:
+                config[section]['passed'].append(key)
+            if 's' in section_old[key]:
+                config[section]['skipped'].append(key)
+            if 'u' in section_old[key]:
+                config[section]['unknown'].append(key)
 
     try:
         config_parser = ConfigParser()
@@ -211,21 +216,21 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                 else:
                     stepstyle = "Step"
                 document.add_paragraph("{}> {}".format(indent_str, step['name']), style=stepstyle)
-                if config_info['parameters'] and 'parameters' in step:
+                if 'parameters' in config_info and 'parameters' in step:
                     for p in step['parameters']:
                         paragraph = document.add_paragraph("{}    ".format(indent_str), style='Step Param Parag')
                         paragraph.add_run("{} = {}".format(p['name'], _format_argval(p['value'])), style='Step Param')
-                if config_info['details'] and 'statusDetails' in step and len(step['statusDetails']) != 0 \
+                if 'details' in config_info and 'statusDetails' in step and len(step['statusDetails']) != 0 \
                         and ('message' in step['statusDetails'] and len(step['statusDetails']['message']) != 0
-                             or config_info['trace'] and 'trace' in step['statusDetails'] and len(
+                             or 'trace' in config_info and 'trace' in step['statusDetails'] and len(
                             step['statusDetails']['trace']) != 0):
                     if 'message' in step['statusDetails']:
                         document.add_paragraph(step['statusDetails']['message'], style=stepstyle)
-                    if config_info['trace'] and 'trace' in step['statusDetails']:
+                    if 'trace' in config_info and 'trace' in step['statusDetails']:
                         table = document.add_table(rows=1, cols=1, style="Trace table")
                         hdr_cells = table.rows[0].cells
                         hdr_cells[0].add_paragraph(step['statusDetails']['trace'] + '\n', style='Code')
-                if config_info['attachments']:
+                if 'attachments' in config_info:
                     print_attachments(document, step)
                 print_steps(document, step, config_info, indent + 1)
 
@@ -286,7 +291,7 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
 
             table = None
             added_table = False
-            if config_info['duration']:
+            if 'duration' in config_info:
                 duration = test['stop'] - test['start']
                 duration_unit = "ms"
                 if duration > 1000:
@@ -303,19 +308,18 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
 
             # add labels to table
             for label_name in config_labels:
-                if config_labels[label_name] == 1:
-                    if not added_table:
-                        table = document.add_table(rows=0, cols=2, style="Label table")
-                        added_table = True
-                    iterator = iter(label for label in test['labels'] if label['name'].lower() == label_name)
-                    label = next(iterator, None)
-                    if label is not None:
-                        row = table.add_row()
-                        row.cells[0].paragraphs[-1].clear().add_run(label_name.capitalize())
-                        while label is not None:
-                            row.cells[1].add_paragraph(label['value'])
-                            label = next(iterator, None)
-                        delete_paragraph(row.cells[1].paragraphs[0])
+                if not added_table:
+                    table = document.add_table(rows=0, cols=2, style="Label table")
+                    added_table = True
+                iterator = iter(label for label in test['labels'] if label['name'].lower() == label_name)
+                label = next(iterator, None)
+                if label is not None:
+                    row = table.add_row()
+                    row.cells[0].paragraphs[-1].clear().add_run(label_name.capitalize())
+                    while label is not None:
+                        row.cells[1].add_paragraph(label['value'])
+                        label = next(iterator, None)
+                    delete_paragraph(row.cells[1].paragraphs[0])
 
             if table is not None:
                 table.columns[0].width = Cm(4)
@@ -325,30 +329,30 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                 for cell in table.columns[1].cells:
                     cell.width = Cm(12)
 
-            if config_info['description']:
+            if 'description' in config_info:
                 document.add_heading('Description', level=2)
                 if 'description' in test and len(test['description']) != 0:
                     document.add_paragraph(test['description'])
                 else:
                     document.add_paragraph('No description available.')
 
-            if config_info['parameters'] and 'parameters' in test and len(test['parameters']) != 0:
+            if 'parameters' in config_info and 'parameters' in test and len(test['parameters']) != 0:
                 document.add_heading('Parameters', level=2)
                 for p in test['parameters']:
                     document.add_paragraph("{}: {}".format(p['name'], p['value']), style='Step')
 
-            if config_info['details'] and 'statusDetails' in test and len(test['statusDetails']) != 0 \
+            if 'details' in config_info and 'statusDetails' in test and len(test['statusDetails']) != 0 \
                     and ('message' in test['statusDetails'] and len(test['statusDetails']['message']) != 0
-                         or config_info['trace'] and 'trace' in test['statusDetails']):
+                         or 'trace' in config_info and 'trace' in test['statusDetails']):
                 document.add_heading('Details', level=2)
                 if 'message' in test['statusDetails']:
                     document.add_paragraph(test['statusDetails']['message'], style=None)
-                if config_info['trace'] and 'trace' in test['statusDetails']:
+                if 'trace' in config_info and 'trace' in test['statusDetails']:
                     table = document.add_table(rows=1, cols=1, style="Trace table")
                     hdr_cells = table.rows[0].cells
                     hdr_cells[0].add_paragraph(test['statusDetails']['trace'] + '\n', style='Code')
 
-            if config_info['links'] and 'links' in test and len(test['links']) != 0:
+            if 'links' in config_info and 'links' in test and len(test['links']) != 0:
                 document.add_heading('Links', level=2)
                 for link in test['links']:
                     if 'name' in link and 'url' in link:
@@ -356,7 +360,7 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                     else:
                         print("WARNING: A link was provided without name or url and will not be printed.")
 
-            if config_info['setup']:
+            if 'setup' in config_info:
                 document.add_heading('Test Setup', level=2)
                 for parent in test['parents']:
                     if 'befores' in parent:
@@ -367,14 +371,14 @@ def create_docx(sorted_results, session, template_path, output_path, title, logo
                 if document.paragraphs[-1].text == "Test Setup":
                     delete_paragraph(document.paragraphs[-1])
 
-            if config_info['body']:
+            if 'body' in config_info:
                 document.add_heading('Test Body', level=2)
                 print_attachments(document, test)
                 print_steps(document, test, config_info)
                 if document.paragraphs[-1].text == "Test Body":
                     delete_paragraph(document.paragraphs[-1])
 
-            if config_info['teardown']:
+            if 'teardown' in config_info:
                 document.add_heading('Test Teardown', level=2)
                 for parent in test['parents']:
                     if 'afters' in parent:

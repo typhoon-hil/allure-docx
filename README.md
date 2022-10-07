@@ -41,28 +41,27 @@ You can generate the docx file by running `allure-docx ALLUREDIR filename.docx`
 Use the `--config` option to control which information should be added. Use the preset names or give a path to your custom .ini file. A custom .ini file could look like this:
 ```
 [info]
-description = 11111
-details = 11111
-trace = 11111
-parameters = 11111
-links = 11111
-setup = 11111
-body = 11000
-teardown = 11000
-duration = 11000
-attachments = 11111
+description = fbpsu
+details = fbpsu
+trace = fbpsu
+parameters = fbpsu
+links = fbpsu
+setup = fbpsu
+body = fb
+teardown = fb
+duration = fb
+attachments = fbpsu
 [labels]
-customLabel = 10101
+customLabel = fpu
 ```
 
-It will appear inside the label table directly below the test heading. 
-Each number (0 or 1) stands for a status ands states if a test with this status should be displayed with or without the given info/label. For the mapping see following table:
+The report will display tests with the specified field if the corresponding character is inlcuded. For mapping see following table:
 
-|            | failed | broken | passed | skipped | unknown |
-|------------|--------|--------|--------|---------|---------|
-| variable = | 1      | 1      | 0      | 0       | 0       |
+| failed | broken | passed | skipped | unknown |
+|--------|--------|--------|---------|---------|
+| f      | b      | p      | s       | u       |
 
-All fields in [info] are mandatory. Add a custom label under [labels] section to include it in the report. 
+Add a custom label under [labels] section to include it in the report. It will appear inside the label table directly below the test heading. 
 
 ### PDF
 
