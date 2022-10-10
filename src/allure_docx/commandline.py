@@ -5,7 +5,6 @@ import click
 import sys
 import shutil
 import ast
-from docx2pdf import convert
 
 class PythonLiteralOption(click.Option):
     def type_cast_value(self, ctx, value):
