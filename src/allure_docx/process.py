@@ -69,9 +69,19 @@ def get_config_from_file(path):
 def build_data(alluredir):
     def _process_steps(session, node):
         if 'start' in node:
-            if session['start'] is None or node['start'] < session['start']:
+            if 'start' not in session:
                 session['start'] = node['start']
-            if session['stop'] is None or node['stop'] > session['stop']:
+            elif session['start'] is None:
+                session['start'] = node['start']
+            elif node['start'] < session['start']:
+                session['start'] = node['start']
+
+        if 'stop' in node:
+            if 'stop' not in session:
+                session['stop'] = node['stop']
+            elif session['stop'] is None:
+                session['stop'] = node['stop']
+            elif node['stop'] > session['stop']:
                 session['stop'] = node['stop']
 
         if "steps" in node:
