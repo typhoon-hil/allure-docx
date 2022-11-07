@@ -28,7 +28,7 @@ Then you can use the executable directly (possibly adding it a folder added to P
 
 You can install from source using:
 
-`pip install git+https://github.com/typhoon-hil/allure-docx.git`
+`pip install git+https://github.com/bjarnesc/allure-docx.git`
 
 Then you should be able to use `allure-docx` executable like you use `pip`.
 
