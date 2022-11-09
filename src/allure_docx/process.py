@@ -11,7 +11,6 @@ import json
 from docx.shared import Mm, Cm
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.text import WD_BREAK
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
@@ -262,26 +261,32 @@ def create_docx(sorted_results, session, config):
         p.getparent().remove(p)
         p._p = p._element = None
 
-    # def add_page_number(run):
-    #     def create_attribute(element, name, value):
-    #         element.set(ns.qn(name), value)
-    #
-    #     def create_element(name):
-    #         return OxmlElement(name)
-    #
-    #     fldChar1 = create_element('w:fldChar')
-    #     create_attribute(fldChar1, 'w:fldCharType', 'begin')
-    #
-    #     instrText = create_element('w:instrText')
-    #     create_attribute(instrText, 'xml:space', 'preserve')
-    #     instrText.text = "PAGE"
-    #
-    #     fldChar2 = create_element('w:fldChar')
-    #     create_attribute(fldChar2, 'w:fldCharType', 'end')
-    #
-    #     run._r.append(fldChar1)
-    #     run._r.append(instrText)
-    #     run._r.append(fldChar2)
+    def add_page_number(run):
+        def create_attribute(element, name, value):
+            element.set(qn(name), value)
+
+        def create_element(name):
+            return OxmlElement(name)
+
+        fldChar1 = create_element('w:fldChar')
+        create_attribute(fldChar1, 'w:fldCharType', 'begin')
+
+        instrText = create_element('w:instrText')
+        create_attribute(instrText, 'xml:space', 'preserve')
+        instrText.text = "PAGE"
+
+        fldChar2 = create_element('w:fldChar')
+        create_attribute(fldChar2, 'w:fldCharType', 'end')
+
+        run._r.append(fldChar1)
+        run._r.append(instrText)
+        run._r.append(fldChar2)
+
+    def create_footer(footer):
+        footer.paragraphs[0].text += datetime.today().strftime('%Y-%m-%d')
+        footer.paragraphs[0].text += "\t\t"
+        footer_run = footer.paragraphs[0].add_run()
+        add_page_number(footer_run)
 
     def create_header(header, details=False):
         htable = header.add_table(1, 2, Cm(16))
@@ -319,7 +324,13 @@ def create_docx(sorted_results, session, config):
     document.add_paragraph(subtitle, style="Subtitle")
     document.add_paragraph("\n" + datetime.today().strftime('%Y-%m-%d'), style="heading 2")
 
-    document.add_page_break()
+    document.add_section()
+    footer = document.sections[1].footer
+    footer.is_linked_to_previous = False
+    create_footer(footer)
+    header = document.sections[1].header
+    header.is_linked_to_previous = False
+    create_header(header, True)
 
     document.add_paragraph("Test Session Summary", style="Heading 2")
 
@@ -343,13 +354,7 @@ def create_docx(sorted_results, session, config):
     run = paragraph.add_run()
     run.add_picture(session["piechart_source"], width=Mm(75))
 
-    document.add_paragraph("Test Results", style="TOC Header")
-    create_TOC(document)
-
-    document.add_section()
-    header = document.sections[1].header
-    header.is_linked_to_previous = False
-    create_header(header, True)
+    document.add_page_break()
 
     # print tests
     for test in sorted_results:
