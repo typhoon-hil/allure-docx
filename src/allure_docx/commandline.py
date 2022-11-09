@@ -6,6 +6,7 @@ import sys
 import shutil
 import ast
 
+
 class PythonLiteralOption(click.Option):
     def type_cast_value(self, ctx, value):
         try:
@@ -15,25 +16,41 @@ class PythonLiteralOption(click.Option):
 
 
 template_dir = None
-if getattr( sys, 'frozen', False ) :
-        # running in a bundle
-        template_dir = sys._MEIPASS
-else :
-        # running live
-        template_dir = os.path.dirname(os.path.realpath(__file__))
+if getattr(sys, "frozen", False):
+    # running in a bundle
+    template_dir = sys._MEIPASS
+else:
+    # running live
+    template_dir = os.path.dirname(os.path.realpath(__file__))
 
 cwd = os.getcwd()
 
 
 @click.command()
-@click.argument('alluredir')
-@click.argument('output')
-@click.option('--template', default=None, help='Path (absolute or relative) to a custom docx template file with styles')
-@click.option('--config', default="full", help="Configuration for the docx report. Options are: full, full_on_fail, no_trace, compact. Alternatively path to custom .ini configuration file (see documentation).")
-@click.option('--pdf', is_flag=True, help='Try to generate a pdf file from created docx using soffice or OfficeToPDF (needs MS Word installed)')
-@click.option('--title', default=None, help='Custom report title')
-@click.option('--logo', default=None, help='Path to custom report logo image')
-@click.option('--logo-height', default=None, help='Image height in centimeters. Width is scaled to keep aspect ratio')
+@click.argument("alluredir")
+@click.argument("output")
+@click.option(
+    "--template",
+    default=None,
+    help="Path (absolute or relative) to a custom docx template file with styles",
+)
+@click.option(
+    "--config",
+    default="full",
+    help="Configuration for the docx report. Options are: full, full_on_fail, no_trace, compact. Alternatively path to custom .ini configuration file (see documentation).",
+)
+@click.option(
+    "--pdf",
+    is_flag=True,
+    help="Try to generate a pdf file from created docx using soffice or OfficeToPDF (needs MS Word installed)",
+)
+@click.option("--title", default=None, help="Custom report title")
+@click.option("--logo", default=None, help="Path to custom report logo image")
+@click.option(
+    "--logo-height",
+    default=None,
+    help="Image height in centimeters. Width is scaled to keep aspect ratio",
+)
 def main(alluredir, output, template, pdf, title, logo, logo_height, config):
     """alluredir: Path (relative or absolute) to alluredir folder with test results
 
@@ -55,19 +72,23 @@ def main(alluredir, output, template, pdf, title, logo, logo_height, config):
 
     if pdf:
         filepath, ext = os.path.splitext(output)
-        output_pdf = filepath+".pdf"
+        output_pdf = filepath + ".pdf"
         officetopdf = shutil.which("OfficeToPDF")
         soffice = shutil.which("soffice")
 
         if officetopdf is not None:
             print("Found OfficeToPDF, using it. Make sure you have MS Word installed.")
-            proc = subprocess.run([officetopdf, "/bookmarks", "/print", output, output_pdf], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            proc = subprocess.run(
+                [officetopdf, "/bookmarks", "/print", output, output_pdf],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
             print(proc.stdout.decode())
             sys.exit(proc.returncode)
         elif soffice is not None:
             result_dir = os.path.dirname(output)
             doc_path = output
-            subprocess.call(['soffice', '--convert-to', 'pdf', '--outdir', result_dir, doc_path])
+            subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, doc_path])
             return doc_path
         else:
             print("Could not find neither OfficeToPDF nor soffice. Not generating PDF.")
