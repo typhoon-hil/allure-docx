@@ -36,8 +36,8 @@ cwd = os.getcwd()
 )
 @click.option(
     "--config",
-    default="full",
-    help="Configuration for the docx report. Options are: full, full_on_fail, no_trace, compact. Alternatively path to custom .ini configuration file (see documentation).",
+    default="standard",
+    help="Configuration for the docx report. Options are: standard, standard_on_fail, no_trace, compact. Alternatively path to custom .ini configuration file (see documentation).",
 )
 @click.option(
     "--pdf",

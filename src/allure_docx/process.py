@@ -3,7 +3,7 @@ from configparser import ConfigParser
 from os import listdir
 from os.path import join, isfile
 from time import ctime
-from datetime import timedelta
+from datetime import timedelta, datetime
 import warnings
 
 import json
@@ -11,9 +11,9 @@ import json
 from docx.shared import Mm, Cm
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_BREAK
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-from docx.shared import Cm
 
 from . import piechart
 
@@ -33,7 +33,7 @@ def _format_argval(argval):
     return argval
 
 
-def get_config_from_file(path):
+def get_config_from_file(standard_path, path):
     def transform_by_status_to_dict(config, section):
         section_old = config[section]
         config[section] = {}
@@ -56,7 +56,9 @@ def get_config_from_file(path):
 
     try:
         config_parser = ConfigParser()
-        config_parser.read(path)
+        config_parser.read(standard_path)
+        if path is not standard_path:
+            config_parser.read(path)
         config = {s: dict(config_parser.items(s)) for s in config_parser.sections()}
         transform_by_status_to_dict(config, "info")
         transform_by_status_to_dict(config, "labels")
@@ -178,17 +180,7 @@ def build_data(alluredir):
 
     return sorted_results, session
 
-
-def create_docx(
-    sorted_results,
-    session,
-    template_path,
-    output_path,
-    title,
-    logo_path,
-    logo_height,
-    config,
-):
+def create_docx(sorted_results, session, config):
     def create_TOC(document):
         # Snippet from:
         # https://github.com/python-openxml/python-docx/issues/36
@@ -244,16 +236,16 @@ def create_docx(
                             style="Step Param",
                         )
                 if (
-                    "details" in config_info
-                    and "statusDetails" in step
-                    and len(step["statusDetails"]) != 0
-                    and (
+                        "details" in config_info
+                        and "statusDetails" in step
+                        and len(step["statusDetails"]) != 0
+                        and (
                         "message" in step["statusDetails"]
                         and len(step["statusDetails"]["message"]) != 0
                         or "trace" in config_info
                         and "trace" in step["statusDetails"]
                         and len(step["statusDetails"]["trace"]) != 0
-                    )
+                )
                 ):
                     if "message" in step["statusDetails"]:
                         document.add_paragraph(step["statusDetails"]["message"], style=stepstyle)
@@ -270,180 +262,226 @@ def create_docx(
         p.getparent().remove(p)
         p._p = p._element = None
 
-    document = Document(template_path)
+    # def add_page_number(run):
+    #     def create_attribute(element, name, value):
+    #         element.set(ns.qn(name), value)
+    #
+    #     def create_element(name):
+    #         return OxmlElement(name)
+    #
+    #     fldChar1 = create_element('w:fldChar')
+    #     create_attribute(fldChar1, 'w:fldCharType', 'begin')
+    #
+    #     instrText = create_element('w:instrText')
+    #     create_attribute(instrText, 'xml:space', 'preserve')
+    #     instrText.text = "PAGE"
+    #
+    #     fldChar2 = create_element('w:fldChar')
+    #     create_attribute(fldChar2, 'w:fldCharType', 'end')
+    #
+    #     run._r.append(fldChar1)
+    #     run._r.append(instrText)
+    #     run._r.append(fldChar2)
 
-    if logo_path is not None:
-        if logo_height is not None:
-            logo_height = Cm(logo_height)
-        document.add_picture(logo_path, height=logo_height)
-        document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    def create_header(header, details=False):
+        htable = header.add_table(1, 2, Cm(16))
+        htable.style = "header table"
+        htab_cells = htable.rows[0].cells
 
-    if title != "":
-        if title is None:
-            title = "Allure"
-        document.add_heading(title, 0)
-        document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-    document.add_paragraph("Test Report", style="Subtitle")
-    document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        if config['logo']['path'] is not None:
+            ht1 = htab_cells[1].add_paragraph()
+            ht1.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            kh = ht1.add_run()
+            kh.add_picture(config['logo']['path'], width=Cm(5))
 
-    document.add_paragraph("Test Session Summary", style="Alternative Heading 1")
+        if details:
+            header_text = "Test Report"
+            header_text += "\n" + config['cover']['title']
+            if 'device_under_test' in config['details']:
+                header_text += "\n" + config['details']['device_under_test']
+            htab_cells[0].add_paragraph(header_text)
+            delete_paragraph(header.paragraphs[0])
+            delete_paragraph(htab_cells[0].paragraphs[0])
+            delete_paragraph(htab_cells[1].paragraphs[0])
+            header.add_paragraph("")
+
+    document = Document(config['template_path'])
+
+    header = document.sections[0].header
+    create_header(header)
+
+    if 'company_name' in config['cover']:
+        document.add_paragraph(config['cover']['company_name'], style="company")
+    document.add_paragraph("\n\n\nTest Report", style="Title")
+    subtitle = config['cover']['title']
+    if 'device_under_test' in config['details']:
+        subtitle += "\n" + config['details']['device_under_test']
+    document.add_paragraph(subtitle, style="Subtitle")
+    document.add_paragraph("\n" + datetime.today().strftime('%Y-%m-%d'), style="heading 2")
+
+    document.add_page_break()
+
+    document.add_paragraph("Test Session Summary", style="Heading 2")
 
     if not sorted_results:
         document.add_paragraph("No test result files were found.")
-    else:
-        table = document.add_table(rows=1, cols=2)
-        summary_cell = table.rows[0].cells[0]
-        summary_cell.add_paragraph(
-            "Start: {}\nEnd: {}\nDuration: {}".format(session["start"], session["stop"], session["duration"])
+        document.save(config['output_filename'])
+        return
+    table = document.add_table(rows=1, cols=2)
+    summary_cell = table.rows[0].cells[0]
+    summary_cell.add_paragraph(
+        "Start: {}\nEnd: {}\nDuration: {}".format(session["start"], session["stop"], session["duration"])
+    )
+
+    results_strs = []
+    for item in session["results"]:
+        results_strs.append("{}: {} ({})".format(item, session["results"][item], session["results_relative"][item]))
+    summary_cell.add_paragraph("\n".join(results_strs))
+
+    piechart_cell = table.rows[0].cells[1]
+    paragraph = piechart_cell.paragraphs[0]
+    run = paragraph.add_run()
+    run.add_picture(session["piechart_source"], width=Mm(75))
+
+    document.add_paragraph("Test Results", style="TOC Header")
+    create_TOC(document)
+
+    document.add_section()
+    header = document.sections[1].header
+    header.is_linked_to_previous = False
+    create_header(header, True)
+
+    # print tests
+    for test in sorted_results:
+        # config elements for the specific status of this test
+        config_info = config["info"][test["status"]]
+        config_labels = config["labels"][test["status"]]
+
+        document.add_paragraph(
+            "{}  [ {} ]".format(test["name"], test["status"]),
+            style="Heading {}".format(test["status"]),
         )
 
-        results_strs = []
-        for item in session["results"]:
-            results_strs.append("{}: {} ({})".format(item, session["results"][item], session["results_relative"][item]))
-        summary_cell.add_paragraph("\n".join(results_strs))
+        table = None
+        added_table = False
+        if "duration" in config_info:
+            duration = test["stop"] - test["start"]
+            duration_unit = "ms"
+            if duration > 1000:
+                duration_unit = "s"
+                duration = duration / 1000
+                if duration > 60:
+                    duration_unit = "min"
+                    duration = duration / 60
 
-        piechart_cell = table.rows[0].cells[1]
-        paragraph = piechart_cell.paragraphs[0]
-        run = paragraph.add_run()
-        run.add_picture(session["piechart_source"], width=Mm(75))
+            table = document.add_table(rows=1, cols=2, style="Label table")
+            table.rows[0].cells[0].paragraphs[-1].clear().add_run("Duration")
+            table.rows[0].cells[1].paragraphs[-1].clear().add_run(str(duration) + duration_unit)
+            added_table = True
 
-        document.add_paragraph("Test Results", style="TOC Header")
-        create_TOC(document)
-
-        document.add_page_break()
-
-        # print tests
-        for test in sorted_results:
-            # config elements for the specific status of this test
-            config_info = config["info"][test["status"]]
-            config_labels = config["labels"][test["status"]]
-
-            document.add_paragraph(
-                "{}  [ {} ]".format(test["name"], test["status"]),
-                style="Heading {}".format(test["status"]),
-            )
-
-            table = None
-            added_table = False
-            if "duration" in config_info:
-                duration = test["stop"] - test["start"]
-                duration_unit = "ms"
-                if duration > 1000:
-                    duration_unit = "s"
-                    duration = duration / 1000
-                    if duration > 60:
-                        duration_unit = "min"
-                        duration = duration / 60
-
-                table = document.add_table(rows=1, cols=2, style="Label table")
-                table.rows[0].cells[0].paragraphs[-1].clear().add_run("Duration")
-                table.rows[0].cells[1].paragraphs[-1].clear().add_run(str(duration) + duration_unit)
+        # add labels to table
+        for label_name in config_labels:
+            if not added_table:
+                table = document.add_table(rows=0, cols=2, style="Label table")
                 added_table = True
+            iterator = iter(label for label in test["labels"] if label["name"].lower() == label_name)
+            label = next(iterator, None)
+            if label is not None:
+                row = table.add_row()
+                row.cells[0].paragraphs[-1].clear().add_run(label_name.capitalize())
+                while label is not None:
+                    row.cells[1].add_paragraph(label["value"])
+                    label = next(iterator, None)
+                delete_paragraph(row.cells[1].paragraphs[0])
 
-            # add labels to table
-            for label_name in config_labels:
-                if not added_table:
-                    table = document.add_table(rows=0, cols=2, style="Label table")
-                    added_table = True
-                iterator = iter(label for label in test["labels"] if label["name"].lower() == label_name)
-                label = next(iterator, None)
-                if label is not None:
-                    row = table.add_row()
-                    row.cells[0].paragraphs[-1].clear().add_run(label_name.capitalize())
-                    while label is not None:
-                        row.cells[1].add_paragraph(label["value"])
-                        label = next(iterator, None)
-                    delete_paragraph(row.cells[1].paragraphs[0])
+        if table is not None:
+            table.columns[0].width = Cm(4)
+            for cell in table.columns[0].cells:
+                cell.width = Cm(4)
+            table.columns[1].width = Cm(12)
+            for cell in table.columns[1].cells:
+                cell.width = Cm(12)
+            document.add_paragraph()
 
-            if table is not None:
-                table.columns[0].width = Cm(4)
-                for cell in table.columns[0].cells:
-                    cell.width = Cm(4)
-                table.columns[1].width = Cm(12)
-                for cell in table.columns[1].cells:
-                    cell.width = Cm(12)
+        if "description" in config_info:
+            document.add_heading("Description", level=2)
+            if "description" in test and len(test["description"]) != 0:
+                document.add_paragraph(test["description"])
+            else:
+                document.add_paragraph("No description available.")
 
-            if "description" in config_info:
-                document.add_heading("Description", level=2)
-                if "description" in test and len(test["description"]) != 0:
-                    document.add_paragraph(test["description"])
-                else:
-                    document.add_paragraph("No description available.")
+        if "parameters" in config_info and "parameters" in test and len(test["parameters"]) != 0:
+            document.add_heading("Parameters", level=2)
+            for p in test["parameters"]:
+                document.add_paragraph("{}: {}".format(p["name"], p["value"]), style="Step")
 
-            if "parameters" in config_info and "parameters" in test and len(test["parameters"]) != 0:
-                document.add_heading("Parameters", level=2)
-                for p in test["parameters"]:
-                    document.add_paragraph("{}: {}".format(p["name"], p["value"]), style="Step")
-
-            if (
+        if (
                 "details" in config_info
                 and "statusDetails" in test
                 and len(test["statusDetails"]) != 0
                 and (
-                    "message" in test["statusDetails"]
-                    and len(test["statusDetails"]["message"]) != 0
-                    or "trace" in config_info
-                    and "trace" in test["statusDetails"]
-                )
-            ):
-                document.add_heading("Details", level=2)
-                if "message" in test["statusDetails"]:
-                    document.add_paragraph(test["statusDetails"]["message"], style=None)
-                if "trace" in config_info and "trace" in test["statusDetails"]:
-                    table = document.add_table(rows=1, cols=1, style="Trace table")
-                    hdr_cells = table.rows[0].cells
-                    hdr_cells[0].add_paragraph(test["statusDetails"]["trace"] + "\n", style="Code")
+                "message" in test["statusDetails"]
+                and len(test["statusDetails"]["message"]) != 0
+                or "trace" in config_info
+                and "trace" in test["statusDetails"]
+        )
+        ):
+            document.add_heading("Details", level=2)
+            if "message" in test["statusDetails"]:
+                document.add_paragraph(test["statusDetails"]["message"], style=None)
+            if "trace" in config_info and "trace" in test["statusDetails"]:
+                table = document.add_table(rows=1, cols=1, style="Trace table")
+                hdr_cells = table.rows[0].cells
+                hdr_cells[0].add_paragraph(test["statusDetails"]["trace"] + "\n", style="Code")
 
-            if "links" in config_info and "links" in test and len(test["links"]) != 0:
-                document.add_heading("Links", level=2)
-                for link in test["links"]:
-                    if "name" in link and "url" in link:
-                        document.add_paragraph("{}: {}".format(link["name"], link["url"]))
-                    else:
-                        print("WARNING: A link was provided without name or url and will not be printed.")
+        if "links" in config_info and "links" in test and len(test["links"]) != 0:
+            document.add_heading("Links", level=2)
+            for link in test["links"]:
+                if "name" in link and "url" in link:
+                    document.add_paragraph("{}: {}".format(link["name"], link["url"]))
+                else:
+                    print("WARNING: A link was provided without name or url and will not be printed.")
 
-            if "setup" in config_info:
-                document.add_heading("Test Setup", level=2)
-                for parent in test["parents"]:
-                    if "befores" in parent:
-                        for before in parent["befores"]:
-                            document.add_paragraph("[Fixture] {}".format(before["name"]), style="Step")
-                            print_attachments(document, before)
-                            print_steps(document, before, config_info, 1)
-                if document.paragraphs[-1].text == "Test Setup":
-                    delete_paragraph(document.paragraphs[-1])
+        if "setup" in config_info:
+            document.add_heading("Test Setup", level=2)
+            for parent in test["parents"]:
+                if "befores" in parent:
+                    for before in parent["befores"]:
+                        document.add_paragraph("[Fixture] {}".format(before["name"]), style="Step")
+                        print_attachments(document, before)
+                        print_steps(document, before, config_info, 1)
+            if document.paragraphs[-1].text == "Test Setup":
+                delete_paragraph(document.paragraphs[-1])
 
-            if "body" in config_info:
-                document.add_heading("Test Body", level=2)
-                print_attachments(document, test)
-                print_steps(document, test, config_info)
-                if document.paragraphs[-1].text == "Test Body":
-                    delete_paragraph(document.paragraphs[-1])
+        if "body" in config_info:
+            document.add_heading("Test Body", level=2)
+            print_attachments(document, test)
+            print_steps(document, test, config_info)
+            if document.paragraphs[-1].text == "Test Body":
+                delete_paragraph(document.paragraphs[-1])
 
-            if "teardown" in config_info:
-                document.add_heading("Test Teardown", level=2)
-                for parent in test["parents"]:
-                    if "afters" in parent:
-                        for after in parent["afters"]:
-                            document.add_paragraph("[Fixture] {}".format(after["name"]), style="Step")
-                            print_attachments(document, after)
-                            print_steps(document, after, config_info, 1)
-                if document.paragraphs[-1].text == "Test Teardown":
-                    delete_paragraph(document.paragraphs[-1])
+        if "teardown" in config_info:
+            document.add_heading("Test Teardown", level=2)
+            for parent in test["parents"]:
+                if "afters" in parent:
+                    for after in parent["afters"]:
+                        document.add_paragraph("[Fixture] {}".format(after["name"]), style="Step")
+                        print_attachments(document, after)
+                        print_steps(document, after, config_info, 1)
+            if document.paragraphs[-1].text == "Test Teardown":
+                delete_paragraph(document.paragraphs[-1])
 
-            # document.add_page_break()
-
-    document.save(output_path)
+    document.save(config['output_filename'])
 
 
 def run(
-    alluredir,
-    template_path,
-    output_filename,
-    title,
-    logo_path,
-    logo_height,
-    config_option,
+        alluredir,
+        template_path,
+        output_filename,
+        title,
+        logo_path,
+        logo_height,
+        config_option,
 ):
     results, session = build_data(alluredir)
 
@@ -452,23 +490,22 @@ def run(
     piechart.create_piechart(session["results"], imgfile)
     config_path = config_option
     script_path = os.path.dirname(os.path.realpath(__file__))
-    if config_option == "full":
-        config_path = script_path + "/config/full.ini"
-    if config_option == "full_on_fail":
-        config_path = script_path + "/config/full_on_fail.ini"
+    standard_config_path = script_path + "/config/standard.ini"
+    if config_option == "standard":
+        config_path = standard_config_path
+    if config_option == "standard_on_fail":
+        config_path = script_path + "/config/standard_on_fail.ini"
     elif config_option == "compact":
         config_path = script_path + "/config/compact.ini"
     elif config_option == "no_trace":
         config_path = script_path + "/config/no_trace.ini"
-    config = get_config_from_file(config_path)
+    config = get_config_from_file(standard_config_path, config_path)
+    config['logo'] = {}
+    config['logo']['path'] = logo_path
+    config['logo']['height'] = logo_height
+    config['output_filename'] = output_filename
+    config['template_path'] = template_path
+    if 'title' not in config['cover']:
+        config['cover']['title'] = title
 
-    create_docx(
-        results,
-        session,
-        template_path,
-        output_filename,
-        title,
-        logo_path,
-        logo_height,
-        config,
-    )
+    create_docx(results, session, config)
