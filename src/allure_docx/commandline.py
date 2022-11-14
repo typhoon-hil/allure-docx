@@ -1,9 +1,8 @@
-import subprocess
-from allure_docx import process
+from allure_docx.report_builder import ReportBuilder
+from allure_docx.config import ReportConfig
 import os
 import click
 import sys
-import shutil
 import ast
 
 
@@ -11,23 +10,12 @@ class PythonLiteralOption(click.Option):
     def type_cast_value(self, ctx, value):
         try:
             return ast.literal_eval(value)
-        except:
+        except Exception:
             raise click.BadParameter(value)
 
 
-template_dir = None
-if getattr(sys, "frozen", False):
-    # running in a bundle
-    template_dir = sys._MEIPASS
-else:
-    # running live
-    template_dir = os.path.dirname(os.path.realpath(__file__))
-
-cwd = os.getcwd()
-
-
 @click.command()
-@click.argument("alluredir")
+@click.argument("allure_dir")
 @click.argument("output")
 @click.option(
     "--template",
@@ -37,7 +25,8 @@ cwd = os.getcwd()
 @click.option(
     "--config",
     default="standard",
-    help="Configuration for the docx report. Options are: standard, standard_on_fail, no_trace, compact. Alternatively path to custom .ini configuration file (see documentation).",
+    help="Configuration for the docx report. Options are: standard, standard_on_fail, no_trace, compact. "
+         "Alternatively path to custom .ini configuration file (see documentation).",
 )
 @click.option(
     "--pdf",
@@ -51,48 +40,65 @@ cwd = os.getcwd()
     default=None,
     help="Image height in centimeters. Width is scaled to keep aspect ratio",
 )
-def main(alluredir, output, template, pdf, title, logo, logo_height, config):
-    """alluredir: Path (relative or absolute) to alluredir folder with test results
+def main(allure_dir, output, template, pdf, title, logo, logo_height, config):
+    """allure_dir: Path (relative or absolute) to allure_dir folder with test results
 
     output: Path (relative or absolute) with filename for the generated docx file"""
-    if not os.path.isabs(alluredir):
-        alluredir = os.path.join(cwd, alluredir)
+    def build_config():
+        _config = ReportConfig()
+        config_path = config
+        script_path = os.path.dirname(os.path.realpath(__file__))
+        standard_config_path = script_path + "/config/standard.ini"
+        if config == "standard":
+            config_path = standard_config_path
+        if config == "standard_on_fail":
+            config_path = script_path + "/config/standard_on_fail.ini"
+        elif config == "compact":
+            config_path = script_path + "/config/compact.ini"
+        elif config == "no_trace":
+            config_path = script_path + "/config/no_trace.ini"
+        _config.read_config_from_file(standard_config_path, config_path)
+
+        _config['logo'] = {}
+        _config['logo']['path'] = logo
+        _config['logo']['height'] = logo_height
+        _config['template_path'] = template
+        _config['allure_dir'] = allure_dir
+        if 'title' not in _config['cover']:
+            _config['cover']['title'] = title
+        return _config
+
+    template_dir = None
+    if getattr(sys, "frozen", False):
+        # running in a bundle
+        template_dir = sys._MEIPASS
+    else:
+        # running live
+        template_dir = os.path.dirname(os.path.realpath(__file__))
+
+    cwd = os.getcwd()
+
+    if not os.path.isabs(allure_dir):
+        allure_dir = os.path.join(cwd, allure_dir)
     if not os.path.isabs(output):
         output = os.path.join(cwd, output)
     if template is None:
         template = os.path.join(template_dir, "template.docx")
-    else:
-        if not os.path.isabs(template):
-            template = os.path.join(cwd, template)
-    print("Template: {}".format(template))
+    elif not os.path.isabs(template):
+        template = os.path.join(cwd, template)
+    print(f"Template: {template}")
 
     if logo_height is not None:
         logo_height = float(logo_height)
-    process.run(alluredir, template, output, title, logo, logo_height, config)
+
+    report_config = build_config()
+    report_builder = ReportBuilder(report_config)
+    report_builder.save_report(output)
 
     if pdf:
-        filepath, ext = os.path.splitext(output)
-        output_pdf = filepath + ".pdf"
-        officetopdf = shutil.which("OfficeToPDF")
-        soffice = shutil.which("soffice")
-
-        if officetopdf is not None:
-            print("Found OfficeToPDF, using it. Make sure you have MS Word installed.")
-            proc = subprocess.run(
-                [officetopdf, "/bookmarks", "/print", output, output_pdf],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
-            print(proc.stdout.decode())
-            sys.exit(proc.returncode)
-        elif soffice is not None:
-            result_dir = os.path.dirname(output)
-            doc_path = output
-            subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, doc_path])
-            return doc_path
-        else:
-            print("Could not find neither OfficeToPDF nor soffice. Not generating PDF.")
-            sys.exit(1)
+        pdf_name, ext = os.path.splitext(output)
+        pdf_name += ".pdf"
+        report_builder.save_report_to_pdf(pdf_name)
 
 
 if __name__ == "__main__":
