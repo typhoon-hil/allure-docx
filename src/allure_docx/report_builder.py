@@ -80,27 +80,28 @@ class ReportBuilder:
         officetopdf = shutil.which("OfficeToPDF")
         soffice = shutil.which("soffice")
 
-        docx_filename = f"{os.path.dirname(output)}/__temp.docx"
-        self.save_report(docx_filename)
+        temp_docx_filename = f"{os.path.dirname(output)}/__temp.docx"
+        temp_pdf_filename = f"{os.path.dirname(output)}/__temp.pdf"
+        self.save_report(temp_docx_filename)
 
         if officetopdf is not None:
             print("Found OfficeToPDF, using it. Make sure you have MS Word installed.")
             proc = subprocess.run(
-                [officetopdf, "/bookmarks", "/print", docx_filename, output],
+                [officetopdf, "/bookmarks", "/print", temp_docx_filename, output],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 check=False
             )
             print(proc.stdout.decode())
-            sys.exit(proc.returncode)
+            os.rename(temp_pdf_filename, output)
         elif soffice is not None:
             result_dir = os.path.dirname(output)
-            doc_path = output
-            subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, doc_path])
+            subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, temp_docx_filename])
+            os.rename(temp_pdf_filename, output)
         else:
             print("Could not find neither OfficeToPDF nor soffice. Not generating PDF.")
 
-        os.remove(docx_filename)
+        os.remove(temp_docx_filename)
 
     def _build_data(self):
         def process_steps(node):
@@ -195,6 +196,32 @@ class ReportBuilder:
                     100 * self.session["results"][item] / self.session["total"])
             else:
                 self.session["results_relative"][item] = "Not available"
+
+    def _create_report(self):
+        if not self.sorted_results:
+            self.document.add_paragraph("No test result files were found.")
+            self.document.save_report(self.config['output_filename'])
+            return
+
+        self._print_cover()
+        self.document.add_section()
+
+        footer = self.document.sections[1].footer
+        footer.is_linked_to_previous = False
+        self._create_footer(footer)
+        header = self.document.sections[1].header
+        header.is_linked_to_previous = False
+        self._create_header(header, True)
+
+        self._print_details()
+        self.document.add_page_break()
+        self._print_session_summary()
+
+        self.document.add_page_break()
+
+        # print tests
+        for test in self.sorted_results:
+            self._print_test(test)
 
     def _create_pie_chart(self):
         img_file = os.path.join(self.session["allure_dir"], "pie.png")
@@ -317,10 +344,11 @@ class ReportBuilder:
             if 'device_under_test' in self.config['details']:
                 header_text += "\n" + self.config['details']['device_under_test']
             htab_cells[0].add_paragraph(header_text)
-            self._delete_paragraph(header.paragraphs[0])
-            self._delete_paragraph(htab_cells[0].paragraphs[0])
-            self._delete_paragraph(htab_cells[1].paragraphs[0])
             header.add_paragraph("")
+
+        self._delete_paragraph(header.paragraphs[0])
+        self._delete_paragraph(htab_cells[0].paragraphs[0])
+        self._delete_paragraph(htab_cells[1].paragraphs[0])
 
     def _print_cover(self):
         header = self.document.sections[0].header
@@ -346,6 +374,13 @@ class ReportBuilder:
                 detail_table.rows[i].cells[0].paragraphs[-1].clear().add_run(detail[0].replace("_", " ").capitalize())
                 detail_table.rows[i].cells[1].paragraphs[-1].clear().add_run(re.sub(r";\s*", "\n", detail[1]))
                 i += 1
+
+            detail_table.columns[0].width = Cm(4)
+            for cell in detail_table.columns[0].cells:
+                cell.width = Cm(4)
+            detail_table.columns[1].width = Cm(12)
+            for cell in detail_table.columns[1].cells:
+                cell.width = Cm(12)
 
     def _print_session_summary(self):
         self.document.add_paragraph("Test Session Summary", style="Heading 1")
@@ -482,28 +517,3 @@ class ReportBuilder:
                         self._print_steps(after, config_info, 1)
             if self.document.paragraphs[-1].text == "Test Teardown":
                 self._delete_paragraph(self.document.paragraphs[-1])
-
-    def _create_report(self):
-        if not self.sorted_results:
-            self.document.add_paragraph("No test result files were found.")
-            self.document.save_report(self.config['output_filename'])
-            return
-
-        self._print_cover()
-        self.document.add_section()
-
-        footer = self.document.sections[1].footer
-        footer.is_linked_to_previous = False
-        self._create_footer(footer)
-        header = self.document.sections[1].header
-        header.is_linked_to_previous = False
-        self._create_header(header, True)
-
-        self._print_details()
-        self._print_session_summary()
-
-        self.document.add_page_break()
-
-        # print tests
-        for test in self.sorted_results:
-            self._print_test(test)
