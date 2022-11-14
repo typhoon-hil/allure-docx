@@ -5,6 +5,7 @@ from os.path import join, isfile
 from time import ctime
 from datetime import timedelta, datetime
 import warnings
+import re
 
 import json
 
@@ -261,7 +262,7 @@ def create_docx(sorted_results, session, config):
         p.getparent().remove(p)
         p._p = p._element = None
 
-    def add_page_number(run):
+    def add_field(run, field):
         def create_attribute(element, name, value):
             element.set(qn(name), value)
 
@@ -273,7 +274,7 @@ def create_docx(sorted_results, session, config):
 
         instrText = create_element('w:instrText')
         create_attribute(instrText, 'xml:space', 'preserve')
-        instrText.text = "PAGE"
+        instrText.text = field
 
         fldChar2 = create_element('w:fldChar')
         create_attribute(fldChar2, 'w:fldCharType', 'end')
@@ -286,7 +287,7 @@ def create_docx(sorted_results, session, config):
         footer.paragraphs[0].text += datetime.today().strftime('%Y-%m-%d')
         footer.paragraphs[0].text += "\t\t"
         footer_run = footer.paragraphs[0].add_run()
-        add_page_number(footer_run)
+        add_field(footer_run, field="PAGE")
 
     def create_header(header, details=False):
         htable = header.add_table(1, 2, Cm(16))
@@ -315,9 +316,10 @@ def create_docx(sorted_results, session, config):
     header = document.sections[0].header
     create_header(header)
 
+    delete_paragraph(document.paragraphs[-0])
     if 'company_name' in config['cover']:
-        document.add_paragraph(config['cover']['company_name'], style="company")
-    document.add_paragraph("\n\n\nTest Report", style="Title")
+        document.add_paragraph("\n" + config['cover']['company_name'], style="company")
+    document.add_paragraph("\n\n\n\nTest Report", style="Title")
     subtitle = config['cover']['title']
     if 'device_under_test' in config['details']:
         subtitle += "\n" + config['details']['device_under_test']
@@ -332,7 +334,17 @@ def create_docx(sorted_results, session, config):
     header.is_linked_to_previous = False
     create_header(header, True)
 
-    document.add_paragraph("Test Session Summary", style="Heading 2")
+    if 'details' in config and len(config['details']) > 0:
+        document.add_paragraph("Test Details", style="Heading 1")
+
+        i = 0
+        detail_table = document.add_table(rows=len(config['details']), cols=2, style="Label table")
+        for detail in config['details'].items():
+            detail_table.rows[i].cells[0].paragraphs[-1].clear().add_run(detail[0].replace("_", " ").capitalize())
+            detail_table.rows[i].cells[1].paragraphs[-1].clear().add_run(re.sub(r";\s*", "\n", detail[1]))
+            i += 1
+
+    document.add_paragraph("Test Session Summary", style="Heading 1")
 
     if not sorted_results:
         document.add_paragraph("No test result files were found.")
@@ -343,6 +355,7 @@ def create_docx(sorted_results, session, config):
     summary_cell.add_paragraph(
         "Start: {}\nEnd: {}\nDuration: {}".format(session["start"], session["stop"], session["duration"])
     )
+    delete_paragraph(summary_cell.paragraphs[0])
 
     results_strs = []
     for item in session["results"]:
