@@ -214,7 +214,6 @@ class ReportBuilder:
         self._create_header(header, True)
 
         self._print_details()
-        self.document.add_page_break()
         self._print_session_summary()
 
         self.document.add_page_break()
@@ -370,9 +369,20 @@ class ReportBuilder:
 
             i = 0
             detail_table = self.document.add_table(rows=len(self.config['details']), cols=2, style="Label table")
+            thin_details = {}
             for detail in self.config['details'].items():
+                if "*" in detail[0]:
+                    thin_details[detail[0].replace("*", "")] = detail[1]
+                    continue
                 detail_table.rows[i].cells[0].paragraphs[-1].clear().add_run(detail[0].replace("_", " ").capitalize())
                 detail_table.rows[i].cells[1].paragraphs[-1].clear().add_run(re.sub(r";\s*", "\n", detail[1]))
+                i += 1
+
+            for detail in thin_details.items():
+                runner = detail_table.rows[i].cells[0].paragraphs[-1].clear().add_run(detail[0].replace("_", " ").capitalize())
+                runner.bold = False
+                runner = detail_table.rows[i].cells[1].paragraphs[-1].clear().add_run(re.sub(r";\s*", "\n", detail[1]))
+                runner.bold = False
                 i += 1
 
             detail_table.columns[0].width = Cm(4)
@@ -381,6 +391,7 @@ class ReportBuilder:
             detail_table.columns[1].width = Cm(12)
             for cell in detail_table.columns[1].cells:
                 cell.width = Cm(12)
+            self.document.add_page_break()
 
     def _print_session_summary(self):
         self.document.add_paragraph("Test Session Summary", style="Heading 1")
