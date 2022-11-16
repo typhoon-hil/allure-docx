@@ -3,15 +3,6 @@ from allure_docx.config import ReportConfig
 import os
 import click
 import sys
-import ast
-
-
-class PythonLiteralOption(click.Option):
-    def type_cast_value(self, ctx, value):
-        try:
-            return ast.literal_eval(value)
-        except Exception:
-            raise click.BadParameter(value)
 
 
 @click.command()
@@ -44,7 +35,11 @@ def main(allure_dir, output, template, pdf, title, logo, logo_height, config):
     """allure_dir: Path (relative or absolute) to allure_dir folder with test results
 
     output: Path (relative or absolute) with filename for the generated docx file"""
+
     def build_config():
+        """
+        builds the config by creating a ReportConfig object and adding additional configuration variables.
+        """
         _config = ReportConfig()
         config_path = config
         script_path = os.path.dirname(os.path.realpath(__file__))

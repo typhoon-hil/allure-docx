@@ -4,7 +4,6 @@ import re
 import shutil
 import subprocess
 import json
-import sys
 
 from os import listdir
 from os.path import join, isfile
@@ -45,8 +44,8 @@ class ReportBuilder:
 
         self.session = {
             "allure_dir": config['allure_dir'],
-            "start": None,
-            "stop": None,
+            "start": 0,
+            "stop": 0,
             "results": {
                 "broken": 0,
                 "failed": 0,
@@ -103,27 +102,34 @@ class ReportBuilder:
 
         os.remove(temp_docx_filename)
 
+    def _process_steps(self, node):
+        """
+        Check starting and stopping time of each step and adjust start time in session dict accordingly.
+        """
+        if "start" in node:
+            if "start" not in self.session:
+                self.session["start"] = node["start"]
+            elif self.session["start"] is None:
+                self.session["start"] = node["start"]
+            elif node["start"] < self.session["start"]:
+                self.session["start"] = node["start"]
+
+        if "stop" in node:
+            if "stop" not in self.session:
+                self.session["stop"] = node["stop"]
+            elif self.session["stop"] is None:
+                self.session["stop"] = node["stop"]
+            elif node["stop"] > self.session["stop"]:
+                self.session["stop"] = node["stop"]
+
+        if "steps" in node:
+            for step in node["steps"]:
+                self._process_steps(step)
+
     def _build_data(self):
-        def process_steps(node):
-            if "start" in node:
-                if "start" not in self.session:
-                    self.session["start"] = node["start"]
-                elif self.session["start"] is None:
-                    self.session["start"] = node["start"]
-                elif node["start"] < self.session["start"]:
-                    self.session["start"] = node["start"]
-
-            if "stop" in node:
-                if "stop" not in self.session:
-                    self.session["stop"] = node["stop"]
-                elif self.session["stop"] is None:
-                    self.session["stop"] = node["stop"]
-                elif node["stop"] > self.session["stop"]:
-                    self.session["stop"] = node["stop"]
-
-            if "steps" in node:
-                for step in node["steps"]:
-                    process_steps(step)
+        """
+        Build the session dict and the sorted_reuslts dict from the given allure directory.
+        """
 
         def get_sorting_key(d):
             classification = {"broken": 0, "failed": 1, "skipped": 2, "passed": 3}
@@ -135,16 +141,16 @@ class ReportBuilder:
         json_containers = [f for f in listdir(allure_dir) if isfile(join(allure_dir, f)) and "container" in f]
 
         data_containers = []
-        for file in json_containers:
-            with open(join(allure_dir, file), encoding="utf-8") as f:
-                container = json.load(f)
+        for file_name in json_containers:
+            with open(join(allure_dir, file_name), encoding="utf-8") as file:
+                container = json.load(file)
                 data_containers.append(container)
 
         data_results = []
-        for file in json_results:
-            with open(join(allure_dir, file), encoding="utf-8") as f:
-                result = json.load(f)
-                result["_lastmodified"] = os.path.getmtime(join(allure_dir, file))
+        for file_name in json_results:
+            with open(join(allure_dir, file_name), encoding="utf-8") as file:
+                result = json.load(file)
+                result["_lastmodified"] = os.path.getmtime(join(allure_dir, file_name))
 
                 skip = False
                 for previous_item in list(data_results):  # copy
@@ -159,7 +165,7 @@ class ReportBuilder:
                 data_results.append(result)
 
         for result in data_results:
-            process_steps(result)
+            self.process_steps(result)
             self.session["total"] += 1
             self.session["results"][result["status"]] += 1
 
@@ -167,14 +173,15 @@ class ReportBuilder:
             for container in data_containers:
                 if "children" not in container:
                     continue
-                if result["uuid"] in container["children"]:
-                    result["parents"].append(container)
-                    if "befores" in container:
-                        for before in container["befores"]:
-                            process_steps(before)
-                    if "afters" in container:
-                        for after in container["afters"]:
-                            process_steps(after)
+                if result["uuid"] not in container["children"]:
+                    continue
+                result["parents"].append(container)
+                if "befores" in container:
+                    for before in container["befores"]:
+                        self._process_steps(before)
+                if "afters" in container:
+                    for after in container["afters"]:
+                        self._process_steps(after)
 
         if self.session["total"] == 0:
             warnings.warn("No test result files were found!")
@@ -198,20 +205,21 @@ class ReportBuilder:
                 self.session["results_relative"][item] = "Not available"
 
     def _create_report(self):
+        """
+        Main function to create the docx document. Raises Error if no allure result files were found.
+        """
         if not self.sorted_results:
-            self.document.add_paragraph("No test result files were found.")
-            self.document.save_report(self.config['output_filename'])
-            return
+            raise ImportError("No test result files were found in the given allure results folder.")
 
         self._print_cover()
         self.document.add_section()
 
         footer = self.document.sections[1].footer
         footer.is_linked_to_previous = False
-        self._create_footer(footer)
+        self._print_footer(footer)
         header = self.document.sections[1].header
         header.is_linked_to_previous = False
-        self._create_header(header, True)
+        self._print_header(header, True)
 
         self._print_details()
         self._print_session_summary()
@@ -223,11 +231,17 @@ class ReportBuilder:
             self._print_test(test)
 
     def _create_pie_chart(self):
+        """
+        Creates the pie chart for allure results overview and saves it into the allure_dir folder.
+        """
         img_file = os.path.join(self.session["allure_dir"], "pie.png")
         self.session["pie_chart_source"] = img_file
         piechart.create_piechart(self.session["results"], img_file)
 
     def _create_toc(self):
+        """
+        Creates a TOC element.
+        """
         # Snippet from:
         # https://github.com/python-openxml/python-docx/issues/36
         paragraph = self.document.add_paragraph()
@@ -255,6 +269,9 @@ class ReportBuilder:
         # p_element = paragraph._p
 
     def _print_attachments(self, item):
+        """
+        Print attachments from allure results to the document.
+        """
         if "attachments" in item:
             for attachment in item["attachments"]:
                 self.document.add_paragraph(f"[Attachment] {attachment['name']}", style="Step")
@@ -266,6 +283,11 @@ class ReportBuilder:
                     self.document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     def _print_steps(self, parent_step, config_info, indent=0):
+        """
+        Print the given step. The info sub dict of the given test must be provided to apply the configuration.
+        If there are sub-steps in the given parent-step this methods recursively calls itself with the given step.
+        For each Recursion the indent for the print is incremented.
+        """
         indent_str = indent * self.indent * " "
         if "steps" in parent_step:
             for step in parent_step["steps"]:
@@ -295,6 +317,9 @@ class ReportBuilder:
                 self._print_steps(step, config_info, indent + 1)
 
     def _add_field(self, run, field):
+        """
+        Creates a docx field and appends it to the given run object.
+        """
         def create_attribute(element, name, value):
             element.set(qn(name), value)
 
@@ -315,18 +340,28 @@ class ReportBuilder:
         run._r.append(instr_text)
         run._r.append(fld_char2)
 
-    def _create_footer(self, footer):
+    def _print_footer(self, footer):
+        """
+        Prints a footer to the given footer object, including date and page number.
+        """
         footer.paragraphs[0].text += datetime.today().strftime('%Y-%m-%d')
         footer.paragraphs[0].text += "\t\t"
         footer_run = footer.paragraphs[0].add_run()
         self._add_field(footer_run, field="PAGE")
 
     def _delete_paragraph(self, paragraph):
+        """
+        Deletes a given paragraph from the document.
+        """
         p_element = paragraph._element
         p_element.getparent().remove(p_element)
         p_element._p = p_element._element = None
 
-    def _create_header(self, header, details=False):
+    def _print_header(self, header, details=False):
+        """
+        Prints a header to the given header object. This includes a logo (if a logo is specified)
+        and test details if details set to True. Details include the title and the device_under_test if specified.
+        """
         htable = header.add_table(1, 2, Cm(16))
         htable.style = "header table"
         htab_cells = htable.rows[0].cells
@@ -338,8 +373,7 @@ class ReportBuilder:
             kh.add_picture(self.config['logo']['path'], width=Cm(5))
 
         if details:
-            header_text = "Test Report"
-            header_text += "\n" + self.config['cover']['title']
+            header_text = self.config['cover']['title']
             if 'device_under_test' in self.config['details']:
                 header_text += "\n" + self.config['details']['device_under_test']
             htab_cells[0].add_paragraph(header_text)
@@ -350,8 +384,12 @@ class ReportBuilder:
         self._delete_paragraph(htab_cells[1].paragraphs[0])
 
     def _print_cover(self):
+        """
+        Prints the cover page to the document. This includes title, date and if specified inside the [cover] section,
+        the company name and device under test.
+        """
         header = self.document.sections[0].header
-        self._create_header(header)
+        self._print_header(header)
 
         self._delete_paragraph(self.document.paragraphs[-0])
         if 'company_name' in self.config['cover']:
@@ -364,6 +402,9 @@ class ReportBuilder:
         self.document.add_paragraph("\n" + datetime.today().strftime('%Y-%m-%d'), style="heading 2")
 
     def _print_details(self):
+        """
+        Prints the test details that are specified inside the [details] section of the configuration file.
+        """
         if 'details' in self.config and len(self.config['details']) > 0:
             self.document.add_paragraph("Test Details", style="Heading 1")
 
@@ -379,7 +420,8 @@ class ReportBuilder:
                 i += 1
 
             for detail in thin_details.items():
-                runner = detail_table.rows[i].cells[0].paragraphs[-1].clear().add_run(detail[0].replace("_", " ").capitalize())
+                runner = detail_table.rows[i].cells[0].paragraphs[-1].clear().add_run(
+                    detail[0].replace("_", " ").capitalize())
                 runner.bold = False
                 runner = detail_table.rows[i].cells[1].paragraphs[-1].clear().add_run(re.sub(r";\s*", "\n", detail[1]))
                 runner.bold = False
@@ -394,6 +436,9 @@ class ReportBuilder:
             self.document.add_page_break()
 
     def _print_session_summary(self):
+        """
+        Prints the session summary, including results, total running time and a pie chart.
+        """
         self.document.add_paragraph("Test Session Summary", style="Heading 1")
 
         table = self.document.add_table(rows=1, cols=2)
@@ -414,6 +459,9 @@ class ReportBuilder:
         run.add_picture(self.session["pie_chart_source"], width=Mm(75))
 
     def _print_test(self, test):
+        """
+        Prints the specified test to the document.
+        """
         # config elements for the specific status of this test
         config_info = self.config["info"][test["status"]]
         config_labels = self.config["labels"][test["status"]]
