@@ -19,19 +19,6 @@ from docx.oxml import OxmlElement
 from . import piechart
 
 
-def _format_argval(argval):
-    """Remove newlines and limit max length
-
-    From Allure-pytest logger (formats argument in the CLI live logs).
-    Consider using the same function."""
-
-    max_arg_length = 100
-    argval = argval.replace("\n", " ")
-    if len(argval) > max_arg_length:
-        argval = argval[:3] + " ... " + argval[-max_arg_length:]
-    return argval
-
-
 class ReportBuilder:
     """
     Builder to create a report from a given ReportConfig Object.
@@ -64,7 +51,7 @@ class ReportBuilder:
         self.sorted_results = None
         self._build_data()
         self._create_pie_chart()
-        self._create_report()
+        self._print_report()
 
     def save_report(self, output):
         """
@@ -165,7 +152,7 @@ class ReportBuilder:
                 data_results.append(result)
 
         for result in data_results:
-            self.process_steps(result)
+            self._process_steps(result)
             self.session["total"] += 1
             self.session["results"][result["status"]] += 1
 
@@ -204,9 +191,17 @@ class ReportBuilder:
             else:
                 self.session["results_relative"][item] = "Not available"
 
-    def _create_report(self):
+    def _create_pie_chart(self):
         """
-        Main function to create the docx document. Raises Error if no allure result files were found.
+        Creates the pie chart for allure results overview and saves it into the allure_dir folder.
+        """
+        img_file = os.path.join(self.session["allure_dir"], "pie.png")
+        self.session["pie_chart_source"] = img_file
+        piechart.create_piechart(self.session["results"], img_file)
+
+    def _print_report(self):
+        """
+        Main function to print the docx document. Raises Error if no allure result files were found.
         """
         if not self.sorted_results:
             raise ImportError("No test result files were found in the given allure results folder.")
@@ -229,14 +224,6 @@ class ReportBuilder:
         # print tests
         for test in self.sorted_results:
             self._print_test(test)
-
-    def _create_pie_chart(self):
-        """
-        Creates the pie chart for allure results overview and saves it into the allure_dir folder.
-        """
-        img_file = os.path.join(self.session["allure_dir"], "pie.png")
-        self.session["pie_chart_source"] = img_file
-        piechart.create_piechart(self.session["results"], img_file)
 
     def _create_toc(self):
         """
@@ -266,7 +253,7 @@ class ReportBuilder:
         r_element.append(instr_text)
         r_element.append(fld_char2)
         r_element.append(fld_char4)
-        # p_element = paragraph._p
+        p_element = paragraph._p
 
     def _print_attachments(self, item):
         """
@@ -281,6 +268,19 @@ class ReportBuilder:
                         width=Mm(100),
                     )
                     self.document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    @staticmethod
+    def _format_argval(argval):
+        """Remove newlines and limit max length
+
+        From Allure-pytest logger (formats argument in the CLI live logs).
+        Consider using the same function."""
+
+        max_arg_length = 100
+        argval = argval.replace("\n", " ")
+        if len(argval) > max_arg_length:
+            argval = argval[:3] + " ... " + argval[-max_arg_length:]
+        return argval
 
     def _print_steps(self, parent_step, config_info, indent=0):
         """
@@ -300,7 +300,7 @@ class ReportBuilder:
                     for params in step["parameters"]:
                         paragraph = self.document.add_paragraph(f"{indent_str}    ", style="Step Param Parag")
                         paragraph.add_run(
-                            f"{params['name']} = {_format_argval(params['value'])}",
+                            f"{params['name']} = {self._format_argval(params['value'])}",
                             style="Step Param",
                         )
                 if "details" in config_info and "statusDetails" in step and len(step["statusDetails"]) != 0:
@@ -316,7 +316,8 @@ class ReportBuilder:
                     self._print_attachments(step)
                 self._print_steps(step, config_info, indent + 1)
 
-    def _add_field(self, run, field):
+    @staticmethod
+    def _add_field(run, field):
         """
         Creates a docx field and appends it to the given run object.
         """
@@ -403,11 +404,12 @@ class ReportBuilder:
 
     def _print_details(self):
         """
-        Prints the test details that are specified inside the [details] section of the configuration file.
+        Prints the test details that are specified inside the [details] section of the configuration file
+        and a table of content for the tests.
         """
-        if 'details' in self.config and len(self.config['details']) > 0:
-            self.document.add_paragraph("Test Details", style="Heading 1")
+        self.document.add_paragraph("Test Details", style="Heading 1")
 
+        if 'details' in self.config and len(self.config['details']) > 0:
             i = 0
             detail_table = self.document.add_table(rows=len(self.config['details']), cols=2, style="Label table")
             thin_details = {}
