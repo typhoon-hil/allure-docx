@@ -69,6 +69,7 @@ The report will display tests with the specified field (info and labels section)
 | f      | b      | p      | s       | u       |
 
 There are some additional information you can add to your report. This includes following:
+
 #### Add custom details to the Test Details section
 You can add custom variables inside the `[details]` section. These will be printed on the Test Details section of the document. Consider following example:
 ```
@@ -88,6 +89,7 @@ This will be printed as following table under Test Details:
 | **Relevant documents** | Document abc v1.5<br/>Document xyz v5.4 |
 | **Description**        | This is a test description.             |
 | Version                | 0.1                                     |
+
 Notice that putting a * to the variable name makes it regular font, while the name is bold on standard.
 
 #### Add custom labels
