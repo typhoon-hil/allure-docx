@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import json
+import lxml
 
 from os import listdir
 from os.path import join, isfile
@@ -225,36 +226,6 @@ class ReportBuilder:
         for test in self.sorted_results:
             self._print_test(test)
 
-    def _create_toc(self):
-        """
-        Creates a TOC element.
-        """
-        # Snippet from:
-        # https://github.com/python-openxml/python-docx/issues/36
-        paragraph = self.document.add_paragraph()
-        run = paragraph.add_run()
-        fld_char = OxmlElement("w:fldChar")  # creates a new element
-        fld_char.set(qn("w:fldCharType"), "begin")  # sets attribute on element
-        instr_text = OxmlElement("w:instrText")
-        instr_text.set(qn("xml:space"), "preserve")  # sets attribute on element
-        instr_text.text = 'TOC \\o "1-1" \\h \\z'  # change 1-3 depending on heading levels you need
-
-        fld_char2 = OxmlElement("w:fldChar")
-        fld_char2.set(qn("w:fldCharType"), "separate")
-        fld_char3 = OxmlElement("w:t")
-        fld_char3.text = "Right-click to update field."
-        fld_char2.append(fld_char3)
-
-        fld_char4 = OxmlElement("w:fldChar")
-        fld_char4.set(qn("w:fldCharType"), "end")
-
-        r_element = run._r
-        r_element.append(fld_char)
-        r_element.append(instr_text)
-        r_element.append(fld_char2)
-        r_element.append(fld_char4)
-        p_element = paragraph._p
-
     def _print_attachments(self, item):
         """
         Print attachments from allure results to the document.
@@ -407,9 +378,9 @@ class ReportBuilder:
         Prints the test details that are specified inside the [details] section of the configuration file
         and a table of content for the tests.
         """
-        self.document.add_paragraph("Test Details", style="Heading 1")
 
         if 'details' in self.config and len(self.config['details']) > 0:
+            self.document.add_paragraph("Test Details", style="Heading 1")
             i = 0
             detail_table = self.document.add_table(rows=len(self.config['details']), cols=2, style="Label table")
             thin_details = {}
@@ -459,6 +430,28 @@ class ReportBuilder:
         paragraph = pie_chart_cell.paragraphs[0]
         run = paragraph.add_run()
         run.add_picture(self.session["pie_chart_source"], width=Mm(75))
+
+        self.document.add_paragraph("")
+        results = self.session['results']
+
+        def print_result_table(status):
+            if results[status] > 0:
+                result_table = self.document.add_table(rows=results[status], cols=2, style=f"{status} table")
+                i = 0
+                for test in self.sorted_results:
+                    if test['status'] == status:
+                        result_table.rows[i].cells[0].paragraphs[-1].add_run(
+                            test['name'])
+                        result_table.rows[i].cells[1].paragraphs[-1].add_run(
+                            status)
+                        i += 1
+
+        print_result_table("failed")
+        print_result_table("broken")
+        print_result_table("skipped")
+        print_result_table("passed")
+
+
 
     def _print_test(self, test):
         """
