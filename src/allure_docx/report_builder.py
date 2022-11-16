@@ -566,7 +566,7 @@ class ReportBuilder:
             for parent in test["parents"]:
                 if "afters" in parent:
                     for after in parent["afters"]:
-                        self.document.add_paragraph("[Fixture] {after['name']}", style="Step")
+                        self.document.add_paragraph(f"[Fixture] {after['name']}", style="Step")
                         self._print_attachments(after)
                         self._print_steps(after, config_info, 1)
             if self.document.paragraphs[-1].text == "Test Teardown":
