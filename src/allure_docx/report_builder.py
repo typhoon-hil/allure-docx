@@ -446,12 +446,17 @@ class ReportBuilder:
                             status)
                         i += 1
 
+                result_table.columns[0].width = Cm(12)
+                for cell in result_table.columns[0].cells:
+                    cell.width = Cm(12)
+                result_table.columns[1].width = Cm(4)
+                for cell in result_table.columns[1].cells:
+                    cell.width = Cm(4)
+
         print_result_table("failed")
         print_result_table("broken")
         print_result_table("skipped")
         print_result_table("passed")
-
-
 
     def _print_test(self, test):
         """
