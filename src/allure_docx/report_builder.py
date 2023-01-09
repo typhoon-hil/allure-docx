@@ -232,13 +232,15 @@ class ReportBuilder:
         """
         if "attachments" in item:
             for attachment in item["attachments"]:
+                if 'name' not in attachment:
+                    attachment['name'] = ""
                 self.document.add_paragraph(f"[Attachment] {attachment['name']}", style="Step")
                 if "image" in attachment["type"]:
                     self.document.add_picture(
                         os.path.join(self.session["allure_dir"], attachment["source"]),
                         width=Mm(100),
                     )
-                    self.document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    self.document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     @staticmethod
     def _format_argval(argval):
