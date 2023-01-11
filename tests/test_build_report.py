@@ -21,7 +21,8 @@ def test_create_from_commandline():
         "--config", os.path.join(file_dir, "custom.ini")
     ])
 
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 @pytest.fixture(autouse=True)
 def test_remove_build():

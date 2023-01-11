@@ -26,9 +26,11 @@ class ReportBuilder:
 
     def __init__(self, allure_dir, config):
         self.indent = 6
-        self.document = Document(config['template_path'])
         self.config = config
         self.config['allure_dir'] = allure_dir
+        if not self.config['template_path']:
+            self.config['template_path'] = os.path.join(os.path.dirname(os.path.realpath(__file__)), "template.docx")
+        self.document = Document(config['template_path'])
 
         self.session = {
             "allure_dir": config['allure_dir'],

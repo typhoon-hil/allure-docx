@@ -68,23 +68,13 @@ def main(allure_dir, output, template, pdf, title, logo, logo_height, config):
             _config['cover']['title'] = title
         return _config
 
-    template_dir = None
-    if getattr(sys, "frozen", False):
-        # running in a bundle
-        template_dir = sys._MEIPASS
-    else:
-        # running live
-        template_dir = os.path.dirname(os.path.realpath(__file__))
-
     cwd = os.getcwd()
 
     if not os.path.isabs(allure_dir):
         allure_dir = os.path.join(cwd, allure_dir)
     if not os.path.isabs(output):
         output = os.path.join(cwd, output)
-    if template is None:
-        template = os.path.join(template_dir, "template.docx")
-    elif not os.path.isabs(template):
+    elif template and not os.path.isabs(template):
         template = os.path.join(cwd, template)
     print(f"Template: {template}")
 
