@@ -40,11 +40,11 @@ def get_config_option_paths() -> {str: str}:
 @click.option("--title", default=None, help="Custom report title")
 @click.option("--logo", default=None, help="Path to custom report logo image")
 @click.option(
-    "--logo-height",
+    "--logo-width",
     default=None,
-    help="Image height in centimeters. Width is scaled to keep aspect ratio",
+    help="Image width in centimeters. Width is scaled to keep aspect ratio",
 )
-def main(allure_dir, output, template, pdf, title, logo, logo_height, config):
+def main(allure_dir, output, template, pdf, title, logo, logo_width, config):
     """allure_dir: Path (relative or absolute) to allure_dir folder with test results
 
     output: Path (relative or absolute) with filename for the generated docx file"""
@@ -60,9 +60,11 @@ def main(allure_dir, output, template, pdf, title, logo, logo_height, config):
             config_path = config_option_paths[config]
         _config.read_config_from_file(config_path)
 
-        _config['logo'] = {}
-        _config['logo']['path'] = logo
-        _config['logo']['height'] = logo_height
+        if logo:
+            _config['logo'] = {}
+            _config['logo']['path'] = logo
+            if logo_width:
+                _config['logo']['height'] = logo_width
         if template:
             _config['template_path'] = template
         if 'title' not in _config['cover']:
@@ -79,8 +81,8 @@ def main(allure_dir, output, template, pdf, title, logo, logo_height, config):
         template = os.path.join(cwd, template)
     print(f"Template: {template}")
 
-    if logo_height is not None:
-        logo_height = float(logo_height)
+    if logo_width is not None:
+        logo_width = float(logo_width)
 
     report_config = build_config()
     report_builder = ReportBuilder(allure_dir=allure_dir, config=report_config)

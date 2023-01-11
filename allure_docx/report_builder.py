@@ -342,11 +342,15 @@ class ReportBuilder:
         htable.style = "header table"
         htab_cells = htable.rows[0].cells
 
-        if self.config['logo']['path'] is not None:
+        if 'logo' in self.config:
             ht1 = htab_cells[1].add_paragraph()
             ht1.alignment = WD_ALIGN_PARAGRAPH.RIGHT
             kh = ht1.add_run()
-            kh.add_picture(self.config['logo']['path'], width=Cm(5))
+            if 'width' in self.config['logo']:
+                logo_width = Cm(self.config['logo'])
+            else:
+                logo_width = Cm(5)
+            kh.add_picture(self.config['logo']['path'], width=logo_width)
 
         if details:
             header_text = self.config['cover']['title']
