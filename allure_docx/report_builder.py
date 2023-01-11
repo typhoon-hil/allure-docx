@@ -28,7 +28,7 @@ class ReportBuilder:
         self.indent = 6
         self.config = config
         self.config['allure_dir'] = allure_dir
-        if not self.config['template_path']:
+        if not 'template_path' in self.config:
             self.config['template_path'] = os.path.join(os.path.dirname(os.path.realpath(__file__)), "template.docx")
         self.document = Document(config['template_path'])
 
