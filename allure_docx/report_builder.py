@@ -4,7 +4,6 @@ import re
 import shutil
 import subprocess
 import json
-import lxml
 
 from os import listdir
 from os.path import join, isfile

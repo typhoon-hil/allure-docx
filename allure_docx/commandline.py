@@ -1,8 +1,8 @@
+import os
+import sys
+import click
 from allure_docx.report_builder import ReportBuilder
 from allure_docx.config import ReportConfig
-import os
-import click
-import sys
 
 
 def get_config_option_paths() -> {str: str}:
@@ -58,7 +58,7 @@ def main(allure_dir, output, template, pdf, title, logo, logo_height, config):
         config_option_paths = get_config_option_paths()
         if config in config_option_paths:
             config_path = config_option_paths[config]
-        _config.read_config_from_file(config_option_paths["standard"], config_path)
+        _config.read_config_from_file(config_path)
 
         _config['logo'] = {}
         _config['logo']['path'] = logo

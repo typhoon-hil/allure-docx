@@ -1,3 +1,4 @@
+import os
 from configparser import ConfigParser
 import sys
 
@@ -7,11 +8,10 @@ class ReportConfig(dict):
     A report config extending a dictionary for simple .ini file importing in the correct format.
     """
 
-    def read_config_from_file(self, standard_path, path):
+    def read_config_from_file(self, path):
         """
         Read the report config from a file.
         Parameters:
-            standard_path : path of the standard ini configuration
             path : path to a configuration that overwrites the standard configuration
 
         >>> config = ReportConfig()
@@ -43,6 +43,7 @@ class ReportConfig(dict):
                     self[section]["unknown"].append(key)
 
         try:
+            standard_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config", "standard.ini")
             config_parser = ConfigParser()
             config_parser.read(standard_path)
             if path is not standard_path:
