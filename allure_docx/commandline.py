@@ -64,7 +64,6 @@ def main(allure_dir, output, template, pdf, title, logo, logo_height, config):
         _config['logo']['path'] = logo
         _config['logo']['height'] = logo_height
         _config['template_path'] = template
-        _config['allure_dir'] = allure_dir
         if 'title' not in _config['cover']:
             _config['cover']['title'] = title
         return _config
@@ -93,7 +92,7 @@ def main(allure_dir, output, template, pdf, title, logo, logo_height, config):
         logo_height = float(logo_height)
 
     report_config = build_config()
-    report_builder = ReportBuilder(report_config)
+    report_builder = ReportBuilder(allure_dir=allure_dir, config=report_config)
     report_builder.save_report(output)
 
     if pdf:

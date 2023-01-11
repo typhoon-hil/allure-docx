@@ -24,10 +24,11 @@ class ReportBuilder:
     Builder to create a report from a given ReportConfig Object.
     """
 
-    def __init__(self, config):
+    def __init__(self, allure_dir, config):
         self.indent = 6
         self.document = Document(config['template_path'])
         self.config = config
+        self.config['allure_dir'] = allure_dir
 
         self.session = {
             "allure_dir": config['allure_dir'],
