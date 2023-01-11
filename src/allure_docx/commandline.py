@@ -5,6 +5,19 @@ import click
 import sys
 
 
+def get_config_option_paths() -> {str: str}:
+    """
+    Returns a dictionary of the config option names with their corresponding path.
+    """
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    config_option_paths = {
+        "standard": script_path + "/config/standard.ini",
+        "standard_on_fail": script_path + "/config/standard_on_fail.ini",
+        "compact": script_path + "/config/compact.ini",
+        "no_trace": script_path + "/config/no_trace.ini"
+    }
+    return config_option_paths
+
 @click.command()
 @click.argument("allure_dir")
 @click.argument("output")
@@ -42,17 +55,10 @@ def main(allure_dir, output, template, pdf, title, logo, logo_height, config):
         """
         _config = ReportConfig()
         config_path = config
-        script_path = os.path.dirname(os.path.realpath(__file__))
-        standard_config_path = script_path + "/config/standard.ini"
-        if config == "standard":
-            config_path = standard_config_path
-        if config == "standard_on_fail":
-            config_path = script_path + "/config/standard_on_fail.ini"
-        elif config == "compact":
-            config_path = script_path + "/config/compact.ini"
-        elif config == "no_trace":
-            config_path = script_path + "/config/no_trace.ini"
-        _config.read_config_from_file(standard_config_path, config_path)
+        config_option_paths = get_config_option_paths()
+        if config in config_option_paths:
+            config_path = config_option_paths[config]
+        _config.read_config_from_file(config_option_paths["standard"], config_path)
 
         _config['logo'] = {}
         _config['logo']['path'] = logo
