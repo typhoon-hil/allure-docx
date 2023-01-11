@@ -42,16 +42,12 @@ class ReportConfig(dict):
                 if "u" in section_old[key]:
                     self[section]["unknown"].append(key)
 
-        try:
-            standard_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config", "standard.ini")
-            config_parser = ConfigParser()
-            config_parser.read(standard_path)
-            if path is not standard_path:
-                config_parser.read(path)
-            self.update({s: dict(config_parser.items(s)) for s in config_parser.sections()})
-            transform_by_status_to_dict("info")
-            transform_by_status_to_dict("labels")
+        standard_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config", "standard.ini")
+        config_parser = ConfigParser()
+        config_parser.read(standard_path)
+        if path is not standard_path:
+            config_parser.read(path)
+        self.update({s: dict(config_parser.items(s)) for s in config_parser.sections()})
+        transform_by_status_to_dict("info")
+        transform_by_status_to_dict("labels")
 
-        except Exception as exc:
-            print("Failed to read config file: " + str(exc))
-            sys.exit()
