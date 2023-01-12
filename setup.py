@@ -8,7 +8,7 @@ setup(
     version="0.4.0",
     license="MIT",
     install_requires=[
-        'setuptools-git==1.2'
+        'setuptools-git==1.2',
         'cairosvg',
         'click',
         'pygal',
