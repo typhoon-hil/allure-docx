@@ -8,10 +8,9 @@ setup(
     version="0.4.0",
     license="MIT",
     install_requires=[
-        'setuptools-git==1.2',
-        'cairosvg',
+        'setuptools-git~=1.2',
+        'matplotlib~=3.6.3',
         'click',
-        'pygal',
         'python-docx',
     ],
     extras_require={

@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import json
+import matplotlib.pyplot as plt
 
 from os import listdir
 from os.path import join, isfile
@@ -15,8 +16,6 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-
-from . import piechart
 
 
 class ReportBuilder:
@@ -37,16 +36,18 @@ class ReportBuilder:
             "start": 0,
             "stop": 0,
             "results": {
+                "passed": 0,
+                "skipped": 0,
                 "broken": 0,
                 "failed": 0,
-                "skipped": 0,
-                "passed": 0,
+                "unknown": 0
             },
             "results_relative": {
+                "passed": 0,
+                "skipped": 0,
                 "broken": 0,
                 "failed": 0,
-                "skipped": 0,
-                "passed": 0,
+                "unknown": 0
             },
             "total": 0,
         }
@@ -200,7 +201,26 @@ class ReportBuilder:
         """
         img_file = os.path.join(self.session["allure_dir"], "pie.png")
         self.session["pie_chart_source"] = img_file
-        piechart.create_piechart(self.session["results"], img_file)
+
+        color_map = {
+            "passed": "#97CC64",
+            "broken": "#FFD050",
+            "failed": "#FD5A3E",
+            "skipped": "#AAAAAA",
+            "unknown": "#D35EBE"
+        }
+        colors = []
+        data_arr = []
+        labels = []
+        for item in self.session["results"]:
+            if self.session["results"][item] != 0:
+                data_arr.append(self.session["results"][item])
+                colors.append(color_map[item])
+                labels.append(item)
+
+        plt.pie(data_arr, startangle=90, wedgeprops=dict(width=0.5), labels=data_arr, labeldistance=0.7, colors=colors)
+        plt.legend(labels, frameon=False, loc='upper left', bbox_to_anchor=(-0.25, 0, 0.5, 1))
+        plt.savefig(img_file, bbox_inches="tight")
 
     def _print_report(self):
         """
@@ -287,6 +307,7 @@ class ReportBuilder:
                         table = self.document.add_table(rows=1, cols=1, style="Trace table")
                         hdr_cells = table.rows[0].cells
                         hdr_cells[0].add_paragraph(step["statusDetails"]["trace"] + "\n", style="Code")
+                        self.document.add_paragraph("", style=None)
                 if "attachments" in config_info:
                     self._print_attachments(step)
                 self._print_steps(step, config_info, indent + 1)
@@ -325,7 +346,8 @@ class ReportBuilder:
         footer_run = footer.paragraphs[0].add_run()
         self._add_field(footer_run, field="PAGE")
 
-    def _delete_paragraph(self, paragraph):
+    @staticmethod
+    def _delete_paragraph(paragraph):
         """
         Deletes a given paragraph from the document.
         """
@@ -547,6 +569,7 @@ class ReportBuilder:
                 table = self.document.add_table(rows=1, cols=1, style="Trace table")
                 hdr_cells = table.rows[0].cells
                 hdr_cells[0].add_paragraph(test["statusDetails"]["trace"] + "\n", style="Code")
+                self.document.add_paragraph("", style=None)
 
         if "links" in config_info and "links" in test and len(test["links"]) != 0:
             self.document.add_heading("Links", level=2)
@@ -584,3 +607,5 @@ class ReportBuilder:
                         self._print_steps(after, config_info, 1)
             if self.document.paragraphs[-1].text == "Test Teardown":
                 self._delete_paragraph(self.document.paragraphs[-1])
+
+        self.document.add_paragraph("", style=None)
