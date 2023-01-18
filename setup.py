@@ -9,7 +9,7 @@ setup(
     license="MIT",
     install_requires=[
         'setuptools-git~=1.2',
-        'matplotlib~=3',
+        'matplotlib>=3.0, < 4.0',
         'docx2pdf~=0.1.8',
         'click',
         'python-docx',
