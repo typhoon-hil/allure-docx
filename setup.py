@@ -10,7 +10,7 @@ setup(
     install_requires=[
         'setuptools-git~=1.2',
         'matplotlib~=3.6.3',
-        'docx2pdf~=0.1.8'
+        'docx2pdf~=0.1.8',
         'click',
         'python-docx',
     ],
