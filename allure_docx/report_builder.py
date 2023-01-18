@@ -389,7 +389,7 @@ class ReportBuilder:
         header = self.document.sections[0].header
         self._print_header(header)
 
-        self._delete_paragraph(self.document.paragraphs[-0])
+        self._delete_paragraph(self.document.paragraphs[0])
         if 'company_name' in self.config['cover']:
             self.document.add_paragraph("\n" + self.config['cover']['company_name'], style="company")
         self.document.add_paragraph("\n\n\n\nTest Report", style="Title")
