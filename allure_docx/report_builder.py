@@ -75,18 +75,15 @@ class ReportBuilder:
         temp_pdf_filename = f"{os.path.dirname(output)}/__temp.pdf"
         self.save_report(temp_docx_filename)
 
-        if os.name == 'nt':
-            try:
-                convert(temp_docx_filename, output)
-            except Exception: #noqa
-                pass
-
-        elif soffice is not None:
-            result_dir = os.path.dirname(output)
-            subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, temp_docx_filename])
-            os.rename(temp_pdf_filename, output)
-        else:
-            print("Could not find neither find Word nor soffice (LibreOffice). Not generating PDF.")
+        try:
+            convert(temp_docx_filename, output)
+        except Exception: #noqa
+            if soffice is not None:
+                result_dir = os.path.dirname(output)
+                subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, temp_docx_filename])
+                os.rename(temp_pdf_filename, output)
+            else:
+                print("Could not find neither find Word nor soffice (LibreOffice). Not generating PDF.")
 
         os.remove(temp_docx_filename)
 
@@ -379,8 +376,10 @@ class ReportBuilder:
             header.add_paragraph("")
 
         self._delete_paragraph(header.paragraphs[0])
-        self._delete_paragraph(htab_cells[0].paragraphs[0])
-        self._delete_paragraph(htab_cells[1].paragraphs[0])
+
+        # creates corrupted files:
+        # self._delete_paragraph(htab_cells[0].paragraphs[0])
+        # self._delete_paragraph(htab_cells[1].paragraphs[0])
 
     def _print_cover(self):
         """
