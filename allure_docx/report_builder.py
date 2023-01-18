@@ -16,6 +16,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+from docx2pdf import convert
 
 
 class ReportBuilder:
@@ -67,29 +68,25 @@ class ReportBuilder:
         """
         Save report to given output path as pdf. Tries officetopdf or soffice.
         """
-        officetopdf = shutil.which("OfficeToPDF")
+
         soffice = shutil.which("soffice")
 
         temp_docx_filename = f"{os.path.dirname(output)}/__temp.docx"
         temp_pdf_filename = f"{os.path.dirname(output)}/__temp.pdf"
         self.save_report(temp_docx_filename)
 
-        if officetopdf is not None:
-            print("Found OfficeToPDF, using it. Make sure you have MS Word installed.")
-            proc = subprocess.run(
-                [officetopdf, "/bookmarks", "/print", temp_docx_filename, output],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                check=False
-            )
-            print(proc.stdout.decode())
-            os.rename(temp_pdf_filename, output)
+        if os.name == 'nt':
+            try:
+                convert(temp_docx_filename, output)
+            except Exception: #noqa
+                pass
+
         elif soffice is not None:
             result_dir = os.path.dirname(output)
             subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, temp_docx_filename])
             os.rename(temp_pdf_filename, output)
         else:
-            print("Could not find neither OfficeToPDF nor soffice. Not generating PDF.")
+            print("Could not find neither find Word nor soffice (LibreOffice). Not generating PDF.")
 
         os.remove(temp_docx_filename)
 
