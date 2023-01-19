@@ -106,7 +106,7 @@ You can use the `--title` option to customize the docx report title (or specify 
  
 If you want to remove the title altogether (e.g. your logo already has the company title), you can set `--title=""`.
 
-You can also use the `--logo` option with a path to a custom image to add the test title and the `--logo-height` option to adjust the height size of the logo image (in centimeters).
+You can also use the `--logo` option with a path to a custom image to add the test title and the `--logo-width` option to adjust the width size of the logo image (in centimeters).
 
 Example invocation:
 

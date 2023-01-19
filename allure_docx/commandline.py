@@ -64,7 +64,7 @@ def main(allure_dir, output, template, pdf, title, logo, logo_width, config):
             _config['logo'] = {}
             _config['logo']['path'] = logo
             if logo_width:
-                _config['logo']['height'] = logo_width
+                _config['logo']['width'] = logo_width
         if template:
             _config['template_path'] = template
         if 'title' not in _config['cover']:
