@@ -4,12 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2022-10-05
+## [0.4.0] - 2023-01-19
 ### Changed
 - Configuration is now controlled with .ini files
 - Layout and template changed
 - Added new information that can be added to the report
 - Removed `LibreOfficeToPDF`, instead use `soffice`
+- Removed `OfficeToPdf`, instead use `docx2pdf`
 
 ## [0.3.2] - 2018-10-31
 ### Changed

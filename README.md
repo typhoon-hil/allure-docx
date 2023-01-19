@@ -16,19 +16,21 @@ Feel free to open an issue ticket with any problems or questions. Please if poss
 
 ## Installation
 
+The library uses matplotlib which depends on Visual C++ Redistributables. If not already installed, you can get them here: https://www.microsoft.com/en-in/download/details.aspx?id=48145 .
+
 ### Windows
 
-We publish windows standalone executable files. With them you can use it without having to install anything else other than the cairo dlls, meaning no installing python, etc.
+We publish windows standalone executable files. With them you can use it without having to install anything else, meaning no installing python, etc.
 
 You can download them at: https://github.com/typhoon-hil/allure-docx/releases
 
 Then you can use the executable directly (possibly adding it a folder added to PATH).
 
-### Linux
+### Linux and Windows
 
 You can install from source using:
 
-`pip install git+https://github.com/bjarnesc/allure-docx.git`
+`pip install git+https://github.com/typhoon-hil/allure-docx.git`
 
 Then you should be able to use `allure-docx` executable like you use `pip`.
 
@@ -108,19 +110,13 @@ You can also use the `--logo` option with a path to a custom image to add the te
 
 Example invocation:
 
-`allure-docx --pdf --title="My Company" --logo=C:\mycompanylogo.png --logo-height=2 allure allure.docx`
+`allure-docx --pdf --config=C:\myconfig.ini --logo=C:\mycompanylogo.png --logo-width=2 allure allure.docx`
 
 ### PDF
 
-The `--pdf` option will search for either `OfficeToPDF` or `soffice` application in the PATH to generate the PDF.
+The `--pdf` option will search for either Word (Windows only) or `soffice` (LibreOffice) to generate the PDF.
 
-On Windows, PDFs can be generated from generated docx files using OfficeToPDF application. MS Word needs to be installed.
-
-https://github.com/cognidox/OfficeToPDF/releases
-
-On Windows and Linux, PDFs can be generated using `soffice` application which comes with LibreOffice.
-
-If both `OfficeToPDF` and `soffice` are present, `OfficeToPDF` will be used.
+If both Word and `soffice` are present, Word will be used.
 
 ## Building the standalone executable
 
