@@ -48,13 +48,13 @@ def main(allure_dir, output, template, pdf, title, logo, logo_width, config_tag,
         """
         _config = ReportConfig()
         if config_tag and config_file:
-            raise click.UsageError("Cannot define both config_path and config option.")
+            raise click.UsageError("Cannot define both config_file and config option.")
         elif config_tag:
             script_path = os.path.dirname(os.path.realpath(__file__))
             config = script_path + "/config/" + config_tag + ".ini"
         elif config_file:
             if not config_file.endswith(".ini"):
-                raise click.UsageError("Given config path is not an ini file.")
+                raise click.UsageError("Given config file is not an ini file.")
             config = config_file
         else:
             script_path = os.path.dirname(os.path.realpath(__file__))
