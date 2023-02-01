@@ -352,7 +352,7 @@ class ReportBuilder:
     def _print_header(self, header, details=False):
         """
         Prints a header to the given header object. This includes a logo (if a logo is specified)
-        and test details if details set to True. Details include the title and the device_under_test if specified.
+        and test details if details set to True. Details include the title and the "Device under test" if specified.
         """
         htable = header.add_table(1, 2, Cm(16))
         htable.style = "header table"
@@ -370,8 +370,8 @@ class ReportBuilder:
 
         if details:
             header_text = self.config['cover']['title']
-            if 'device_under_test' in self.config['details']:
-                header_text += "\n" + self.config['details']['device_under_test']
+            if 'Device under test' in self.config['details']:
+                header_text += "\n" + self.config['details']['Device under test']
             htab_cells[0].add_paragraph(header_text)
             header.add_paragraph("")
 
@@ -390,12 +390,12 @@ class ReportBuilder:
         self._print_header(header)
 
         self._delete_paragraph(self.document.paragraphs[0])
-        if 'company_name' in self.config['cover']:
-            self.document.add_paragraph("\n" + self.config['cover']['company_name'], style="company")
+        if 'company' in self.config['cover']:
+            self.document.add_paragraph("\n" + self.config['cover']['company'], style="company")
         self.document.add_paragraph("\n\n\n\nTest Report", style="Title")
         subtitle = self.config['cover']['title']
-        if 'device_under_test' in self.config['details']:
-            subtitle += "\n" + self.config['details']['device_under_test']
+        if 'Device under test' in self.config['details']:
+            subtitle += "\n" + self.config['details']['Device under test']
         self.document.add_paragraph(subtitle, style="Subtitle")
         self.document.add_paragraph("\n" + datetime.today().strftime('%Y-%m-%d'), style="heading 2")
 
@@ -411,19 +411,8 @@ class ReportBuilder:
             detail_table = self.document.add_table(rows=len(self.config['details']), cols=2, style="Label table")
             thin_details = {}
             for detail in self.config['details'].items():
-                if "*" in detail[0]:
-                    thin_details[detail[0].replace("*", "")] = detail[1]
-                    continue
-                detail_table.rows[i].cells[0].paragraphs[-1].clear().add_run(detail[0].replace("_", " ").capitalize())
-                detail_table.rows[i].cells[1].paragraphs[-1].clear().add_run(re.sub(r";\s*", "\n", detail[1]))
-                i += 1
-
-            for detail in thin_details.items():
-                runner = detail_table.rows[i].cells[0].paragraphs[-1].clear().add_run(
-                    detail[0].replace("_", " ").capitalize())
-                runner.bold = False
-                runner = detail_table.rows[i].cells[1].paragraphs[-1].clear().add_run(re.sub(r";\s*", "\n", detail[1]))
-                runner.bold = False
+                detail_table.rows[i].cells[0].paragraphs[-1].clear().add_run(detail[0])
+                detail_table.rows[i].cells[1].paragraphs[-1].clear().add_run(detail[1].strip())
                 i += 1
 
             detail_table.columns[0].width = Cm(4)

@@ -72,15 +72,45 @@ The report will display tests with the specified field (info and labels section)
 
 There are some additional information you can add to your report. This includes following:
 
-#### Add custom details to the Test Details section
-You can add custom variables inside the `[details]` section. These will be printed on the Test Details section of the document. Consider following example:
+<details>
+    <summary style="font-weight: bold">Add custom labels</summary>
+
+The allure engine allows for custom labels inside the test code. These are not printed on standard.
+You can add a custom label under `[labels]` section to include it in the report. It will appear inside the label table directly below the test heading. 
+
+Example:
+
+```
+[labels]
+some_label = fbpsu
+```
+</details>
+<details>
+    <summary style="font-weight: bold">Add a company name to the cover</summary>
+
+You can include a company name on the cover of the report by setting the `company_name` variable under the `[cover]` section. 
+
+Example:
+```
+[cover]
+company = Some company
+```
+
+</details>
+<details>
+    <summary style="font-weight: bold">Add custom details to the Test Details section</summary>
+
+You can add custom variables inside the `[details]` section. These will be printed on the Test Details section of the document. 
+
+Example:
 ```
 [details]
-test_name = Example Test
-device_under_test = Example device under test
-relevant_documents = Document abc v1.5; Document xyz v5.4
-description = This is a test description.
-version* = 0.1
+Test name = Example Test
+Device under test = Example device under test
+Relevant documents = 
+    Document abc v1.5
+    Document xyz v5.4
+Description = This is a test description.
 ```
 This will be printed as following table under Test Details:
 
@@ -90,15 +120,11 @@ This will be printed as following table under Test Details:
 | **Device under test**  | Example device under test               |
 | **Relevant documents** | Document abc v1.5<br/>Document xyz v5.4 |
 | **Description**        | This is a test description.             |
-| Version                | 0.1                                     |
 
-Notice that putting a * to the variable name makes it regular font, while the name is bold on standard.
+Putting "Device under test" into the details section also adds the value to the header."
 
-#### Add custom labels
-The allure engine allows for custom labels inside the test code. These are not printed on standard.
-You can add a custom label under `[labels]` section to include it in the report. It will appear inside the label table directly below the test heading.
-#### Include company name
-You can include a company name on the cover of the report by setting the `company_name` variable under the `[cover]` seciton.
+</details>
+
 
 ### Custom Title and Logo
 
