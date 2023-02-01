@@ -212,9 +212,10 @@ class ReportBuilder:
                 colors.append(color_map[item])
                 labels.append(item)
 
-        plt.pie(data_arr, startangle=90, wedgeprops=dict(width=0.5), labels=data_arr, labeldistance=0.7, colors=colors)
-        plt.legend(labels, frameon=False, loc='upper left', bbox_to_anchor=(-0.25, 0, 0.5, 1))
-        plt.savefig(img_file, bbox_inches="tight")
+        fig, ax = plt.subplots()
+        ax.pie(data_arr, startangle=90, wedgeprops=dict(width=0.5), labels=data_arr, labeldistance=0.7, colors=colors)
+        ax.legend(labels, frameon=False, loc='upper left', bbox_to_anchor=(-0.25, 0, 0.5, 1))
+        fig.savefig(img_file, bbox_inches="tight")
 
     def _print_report(self):
         """
