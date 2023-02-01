@@ -20,7 +20,7 @@ from allure_docx.config import CONFIG_TAGS
     help="Configuration tag for the docx report.",
 )
 @click.option(
-    "--config_path",
+    "--config_file",
     default=None,
     type=click.Path(exists=True, resolve_path=True),
     help="Path to custom .ini configuration file (see documentation).",
@@ -37,7 +37,7 @@ from allure_docx.config import CONFIG_TAGS
     default=None,
     help="Image width in centimeters. Width is scaled to keep aspect ratio",
 )
-def main(allure_dir, output, template, pdf, title, logo, logo_width, config_tag, config_path):
+def main(allure_dir, output, template, pdf, title, logo, logo_width, config_tag, config_file):
     """allure_dir: Path (relative or absolute) to allure_dir folder with test results
 
     output: Path (relative or absolute) with filename for the generated docx file"""
@@ -47,15 +47,15 @@ def main(allure_dir, output, template, pdf, title, logo, logo_width, config_tag,
         builds the config by creating a ReportConfig object and adding additional configuration variables.
         """
         _config = ReportConfig()
-        if config_tag and config_path:
+        if config_tag and config_file:
             raise click.UsageError("Cannot define both config_path and config option.")
         elif config_tag:
             script_path = os.path.dirname(os.path.realpath(__file__))
             config = script_path + "/config/" + config_tag + ".ini"
-        elif config_path:
-            if not config_path.endswith(".ini"):
+        elif config_file:
+            if not config_file.endswith(".ini"):
                 raise click.UsageError("Given config path is not an ini file.")
-            config = config_path
+            config = config_file
         else:
             script_path = os.path.dirname(os.path.realpath(__file__))
             config = script_path + "/config/standard.ini"
