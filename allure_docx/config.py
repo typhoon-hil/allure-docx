@@ -1,6 +1,13 @@
 import os
 from configparser import ConfigParser
-import sys
+
+
+CONFIG_TAGS = [
+    "standard",
+    "standard_on_fail",
+    "compact",
+    "no_trace"
+]
 
 
 class ReportConfig(dict):

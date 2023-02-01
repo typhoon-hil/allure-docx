@@ -1,22 +1,9 @@
 import os
-import sys
 import click
 from allure_docx.report_builder import ReportBuilder
 from allure_docx.config import ReportConfig
+from allure_docx.config import CONFIG_TAGS
 
-
-def get_config_option_paths() -> {str: str}:
-    """
-    Returns a dictionary of the config option names with their corresponding path.
-    """
-    script_path = os.path.dirname(os.path.realpath(__file__))
-    config_option_paths = {
-        "standard": script_path + "/config/standard.ini",
-        "standard_on_fail": script_path + "/config/standard_on_fail.ini",
-        "compact": script_path + "/config/compact.ini",
-        "no_trace": script_path + "/config/no_trace.ini"
-    }
-    return config_option_paths
 
 @click.command()
 @click.argument("allure_dir")
@@ -27,10 +14,16 @@ def get_config_option_paths() -> {str: str}:
     help="Path (absolute or relative) to a custom docx template file with styles",
 )
 @click.option(
-    "--config",
-    default="standard",
-    help="Configuration for the docx report. Options are: standard, standard_on_fail, no_trace, compact. "
-         "Alternatively path to custom .ini configuration file (see documentation).",
+    "--config_tag",
+    default=None,
+    type=click.Choice(CONFIG_TAGS),
+    help="Configuration tag for the docx report.",
+)
+@click.option(
+    "--config_path",
+    default=None,
+    type=click.Path(exists=True, resolve_path=True),
+    help="Path to custom .ini configuration file (see documentation).",
 )
 @click.option(
     "--pdf",
@@ -44,7 +37,7 @@ def get_config_option_paths() -> {str: str}:
     default=None,
     help="Image width in centimeters. Width is scaled to keep aspect ratio",
 )
-def main(allure_dir, output, template, pdf, title, logo, logo_width, config):
+def main(allure_dir, output, template, pdf, title, logo, logo_width, config_tag, config_path):
     """allure_dir: Path (relative or absolute) to allure_dir folder with test results
 
     output: Path (relative or absolute) with filename for the generated docx file"""
@@ -54,11 +47,19 @@ def main(allure_dir, output, template, pdf, title, logo, logo_width, config):
         builds the config by creating a ReportConfig object and adding additional configuration variables.
         """
         _config = ReportConfig()
-        config_path = config
-        config_option_paths = get_config_option_paths()
-        if config in config_option_paths:
-            config_path = config_option_paths[config]
-        _config.read_config_from_file(config_path)
+        if config_tag and config_path:
+            raise click.UsageError("Cannot define both config_path and config option.")
+        elif config_tag:
+            script_path = os.path.dirname(os.path.realpath(__file__))
+            config = script_path + "/config/" + config_tag + ".ini"
+        elif config_path:
+            if not config_path.endswith(".ini"):
+                raise click.UsageError("Given config path is not an ini file.")
+            config = config_path
+        else:
+            script_path = os.path.dirname(os.path.realpath(__file__))
+            config = script_path + "/config/standard.ini"
+        _config.read_config_from_file(config)
 
         if logo:
             _config['logo'] = {}
