@@ -16,7 +16,7 @@ from allure_docx.config import ConfigTags
 @click.option(
     "--config_tag",
     default=None,
-    type=click.Choice(ConfigTags.get_values()),
+    type=click.Choice(ConfigTags.get_names()),
     help="Configuration tag for the docx report.",
 )
 @click.option(
@@ -51,7 +51,7 @@ def main(allure_dir, output, template, pdf, title, logo, logo_width, config_tag,
             raise click.UsageError("Cannot define both config_file and config_tag.")
 
         if config_tag:
-            r_config = ReportConfig(tag=ConfigTags(config_tag))
+            r_config = ReportConfig(tag=ConfigTags[config_tag.upper()])
         elif config_file:
             if not config_file.endswith(".ini"):
                 raise click.UsageError("Given config_file is not an ini file.")

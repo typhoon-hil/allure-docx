@@ -3,6 +3,7 @@ from configparser import ConfigParser
 from enum import Enum
 from enum import EnumMeta
 
+_config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config")
 
 class ConfigTagsEnumMeta(EnumMeta):
     """
@@ -10,24 +11,26 @@ class ConfigTagsEnumMeta(EnumMeta):
     """
 
     def __contains__(cls, item):
-        return isinstance(item, cls) or item in [v.value for v in cls.__members__.values()]
+        return isinstance(item, cls) or item in list(cls.__members__.keys())
+
 
 class ConfigTags(Enum, metaclass=ConfigTagsEnumMeta):
     """
-    Configuration tags, that can be used to create a ReportConfig.
+    Configuration tags, that can be used to create a ReportConfig. Holds the ini file paths for each config tag.
     """
 
-    STANDARD = "standard"
-    STANDARD_ON_FAIL = "standard_on_fail"
-    COMPACT = "compact"
-    NO_TRACE = "no_trace"
+    STANDARD = os.path.join(_config_dir, "standard.ini")
+    STANDARD_ON_FAIL = os.path.join(_config_dir, "standard_on_fail.ini")
+    COMPACT = os.path.join(_config_dir, "compact.ini")
+    NO_TRACE = os.path.join(_config_dir, "no_trace.ini")
 
     @staticmethod
-    def get_values():
+    def get_names() -> [str]:
         """
-        Returns all values as string array.
+        Returns all tags in lower case as string array.
         """
-        return [v.value for v in ConfigTags.__members__.values()]
+        return [v.name.lower() for v in ConfigTags]
+
 
 
 class ReportConfig(dict):
@@ -50,10 +53,9 @@ class ReportConfig(dict):
 
         self.config_parser = ConfigParser()
         if tag:
-            config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config", f"{tag.value}.ini")
-            self.config_parser.read(config_file)
+            self.config_parser.read(tag.value)
         else:
-            standard_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config", "standard.ini")
+            standard_file = ConfigTags.STANDARD.value
             self.config_parser.read(standard_file)
             if config_file:
                 if config_file is not standard_file:
