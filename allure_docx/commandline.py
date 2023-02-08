@@ -2,7 +2,7 @@ import os
 import click
 from allure_docx.report_builder import ReportBuilder
 from allure_docx.config import ReportConfig
-from allure_docx.config import CONFIG_TAGS
+from allure_docx.config import ConfigTags
 
 
 @click.command()
@@ -16,7 +16,7 @@ from allure_docx.config import CONFIG_TAGS
 @click.option(
     "--config_tag",
     default=None,
-    type=click.Choice(CONFIG_TAGS),
+    type=click.Choice(ConfigTags.get_values()),
     help="Configuration tag for the docx report.",
 )
 @click.option(
@@ -28,7 +28,7 @@ from allure_docx.config import CONFIG_TAGS
 @click.option(
     "--pdf",
     is_flag=True,
-    help="Try to generate a pdf file from created docx using soffice or OfficeToPDF (needs MS Word installed)",
+    help="Try to generate a pdf file from created docx using soffice or Word.",
 )
 @click.option("--title", default=None, help="Custom report title")
 @click.option("--logo", default=None, help="Path to custom report logo image")
@@ -46,31 +46,29 @@ def main(allure_dir, output, template, pdf, title, logo, logo_width, config_tag,
         """
         builds the config by creating a ReportConfig object and adding additional configuration variables.
         """
-        _config = ReportConfig()
+
         if config_tag and config_file:
             raise click.UsageError("Cannot define both config_file and config_tag.")
-        elif config_tag:
-            script_path = os.path.dirname(os.path.realpath(__file__))
-            config = script_path + "/config/" + config_tag + ".ini"
+
+        if config_tag:
+            r_config = ReportConfig(tag=ConfigTags(config_tag))
         elif config_file:
             if not config_file.endswith(".ini"):
                 raise click.UsageError("Given config_file is not an ini file.")
-            config = config_file
+            r_config = ReportConfig(config_file=config_file)
         else:
-            script_path = os.path.dirname(os.path.realpath(__file__))
-            config = script_path + "/config/standard.ini"
-        _config.read_config_from_file(config)
+            r_config = ReportConfig()
 
         if logo:
-            _config['logo'] = {}
-            _config['logo']['path'] = logo
+            r_config['logo'] = {}
+            r_config['logo']['path'] = logo
             if logo_width:
-                _config['logo']['width'] = logo_width
+                r_config['logo']['width'] = logo_width
         if template:
-            _config['template_path'] = template
-        if 'title' not in _config['cover']:
-            _config['cover']['title'] = title
-        return _config
+            r_config['template_path'] = template
+        if 'title' not in r_config['cover']:
+            r_config['cover']['title'] = title
+        return r_config
 
     cwd = os.getcwd()
 

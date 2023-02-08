@@ -1,13 +1,33 @@
 import os
 from configparser import ConfigParser
+from enum import Enum
+from enum import EnumMeta
 
 
-CONFIG_TAGS = [
-    "standard",
-    "standard_on_fail",
-    "compact",
-    "no_trace"
-]
+class ConfigTagsEnumMeta(EnumMeta):
+    """
+    MetaClass to make "in" operator possible with strings for ConfigTags enum.
+    """
+
+    def __contains__(cls, item):
+        return isinstance(item, cls) or item in [v.value for v in cls.__members__.values()]
+
+class ConfigTags(Enum, metaclass=ConfigTagsEnumMeta):
+    """
+    Configuration tags, that can be used to create a ReportConfig.
+    """
+
+    STANDARD = "standard"
+    STANDARD_ON_FAIL = "standard_on_fail"
+    COMPACT = "compact"
+    NO_TRACE = "no_trace"
+
+    @staticmethod
+    def get_values():
+        """
+        Returns all values as string array.
+        """
+        return [v.value for v in ConfigTags.__members__.values()]
 
 
 class ReportConfig(dict):
@@ -15,18 +35,35 @@ class ReportConfig(dict):
     A report config extending a dictionary for simple .ini file importing in the correct format.
     """
 
-    def read_config_from_file(self, path):
+    def __init__(self, tag: ConfigTags = None, config_file: str = None):
         """
-        Read the report config from a file.
-        Parameters:
-            path : path to a configuration that overwrites the standard configuration
+        Create a ReportConfig from either a tag defined in "ConfigTags" enum or from a path to a .ini configuration file
 
-        >>> config = ReportConfig()
-        >>> config.read_config_from_file(os.path.dirname(__file__) + "/config/no_trace.ini")
-        >>> "description" in config["info"]["failed"]
-        True
-        >>> "trace" in config["info"]["failed"]
-        False
+        Parameters:
+            tag : Tag defined in ConfigTags.
+            config_file : Path to a .ini configuration file.
+        """
+
+        super().__init__()
+        if tag and config_file:
+            raise ValueError("Cannot initialize ReportConfig with both tag and file.")
+
+        self.config_parser = ConfigParser()
+        if tag:
+            config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config", f"{tag.value}.ini")
+            self.config_parser.read(config_file)
+        else:
+            standard_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config", "standard.ini")
+            self.config_parser.read(standard_file)
+            if config_file:
+                if config_file is not standard_file:
+                    self.config_parser.read(config_file)
+        self._build_dict()
+
+    def _build_dict(self):
+        """
+        Creates the dictionary from the config_parser. Parameter in "info" and "labels" are parsed to each section
+        (failed, broken, passed, skipped, unknown)
         """
 
         def transform_by_status_to_dict(section):
@@ -49,12 +86,6 @@ class ReportConfig(dict):
                 if "u" in section_old[key]:
                     self[section]["unknown"].append(key)
 
-        standard_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config", "standard.ini")
-        config_parser = ConfigParser()
-        config_parser.read(standard_path)
-        if path is not standard_path:
-            config_parser.read(path)
-        self.update({s: dict(config_parser.items(s)) for s in config_parser.sections()})
+        self.update({s: dict(self.config_parser.items(s)) for s in self.config_parser.sections()})
         transform_by_status_to_dict("info")
         transform_by_status_to_dict("labels")
-
