@@ -22,7 +22,7 @@ class ReportConfig(dict):
             path : path to a configuration that overwrites the standard configuration
 
         >>> config = ReportConfig()
-        >>> config.read_config_from_file("config/standard.ini", "config/no_trace.ini")
+        >>> config.read_config_from_file(os.path.dirname(__file__) + "/config/no_trace.ini")
         >>> "description" in config["info"]["failed"]
         True
         >>> "trace" in config["info"]["failed"]
