@@ -18,8 +18,9 @@ setup(
         'dev': ['pyinstaller'],
     },
 
-    packages=find_packages(include=['allure_docx', 'allure_docx.*']),
-    # Should be present so MANIFEST.in is taken into account. However only adds files that are inside package.
+    packages=find_packages(include=['src/allure_docx', 'src/allure_docx.*']),
+    package_dir={'': 'src'},
+    # Should be present so MANIFEST.in is taken into account. However, only adds files that are inside package.
     include_package_data=True,
 
     entry_points={

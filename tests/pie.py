@@ -1,4 +1,4 @@
-from allure_docx.piechart import create_piechart
+from allure_docx import create_piechart
 
 
 data = {
