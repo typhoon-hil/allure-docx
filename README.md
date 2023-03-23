@@ -42,7 +42,7 @@ You can generate the docx file by running `allure-docx ALLUREDIR filename.docx`
 
 ### Configuration
 
-Use the `--config` option to control which information should be added. Use the preset names or give a path to your custom .ini file. 
+Use the `--config_tag` / `--config_file` option to control which information should be added. Use the preset names or give a path to your custom .ini file. 
 When using a custom configuration the standard configuration is used as base and is overwritten for each attribute inside the custom file. 
 The standard file looks like this:
 ```
@@ -136,7 +136,7 @@ You can also use the `--logo` option with a path to a custom image to add the te
 
 Example invocation:
 
-`allure-docx --pdf --config=C:\myconfig.ini --logo=C:\mycompanylogo.png --logo-width=2 allure allure.docx`
+`allure-docx --pdf --config_file=C:\myconfig.ini --logo=C:\mycompanylogo.png --logo-width=2 allure allure.docx`
 
 ### PDF
 
