@@ -5,6 +5,7 @@ from enum import EnumMeta
 
 _config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config")
 
+
 class ConfigTagsEnumMeta(EnumMeta):
     """
     MetaClass to make "in" operator possible with strings for ConfigTags enum.
@@ -30,7 +31,6 @@ class ConfigTags(Enum, metaclass=ConfigTagsEnumMeta):
         Returns all tags in lower case as string array.
         """
         return [v.name.lower() for v in ConfigTags]
-
 
 
 class ReportConfig(dict):

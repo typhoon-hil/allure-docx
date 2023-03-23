@@ -1,6 +1,5 @@
 import os
 import warnings
-import re
 import shutil
 import subprocess
 import json
@@ -28,7 +27,7 @@ class ReportBuilder:
         self.indent = 6
         self.config = config
         self.config['allure_dir'] = allure_dir
-        if not 'template_path' in self.config:
+        if 'template_path' not in self.config:
             self.config['template_path'] = os.path.join(os.path.dirname(os.path.realpath(__file__)), "template.docx")
         self.document = Document(config['template_path'])
 
@@ -53,7 +52,7 @@ class ReportBuilder:
             "total": 0,
         }
 
-        self.sorted_results = None
+        self.sorted_recent_results = None
         self._build_data()
         self._create_pie_chart()
         self._print_report()
@@ -77,7 +76,7 @@ class ReportBuilder:
 
         try:
             convert(temp_docx_filename, output)
-        except Exception: #noqa
+        except Exception:  # noqa
             if soffice is not None:
                 result_dir = os.path.dirname(output)
                 subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, temp_docx_filename])
@@ -131,25 +130,35 @@ class ReportBuilder:
                 container = json.load(file)
                 data_containers.append(container)
 
-        data_results = []
-        for file_name in json_results:
+        data_results_dict = {}
+        for file_name in json_results:  # one array of results per test historyId
             with open(join(allure_dir, file_name), encoding="utf-8") as file:
                 result = json.load(file)
-                result["_lastmodified"] = os.path.getmtime(join(allure_dir, file_name))
+                history_id = result['historyId']
+                if history_id not in data_results_dict:
+                    data_results_dict[history_id] = []
+                data_results_dict[history_id].append(result)
+        history_data_results = list(data_results_dict.items())  # can be used in a later version to implement history
+        for tests in history_data_results:
+            tests[1].sort(key=lambda x: x["start"], reverse=True)
+        recent_results = [results[1][0] for results in history_data_results]  # get only the most recent results
+        id_sorted_recent_results = sorted(recent_results, key=lambda x: x["testCaseId"])
 
-                skip = False
-                for previous_item in list(data_results):  # copy
-                    if previous_item["name"] == result["name"]:
-                        if previous_item["_lastmodified"] > result["_lastmodified"]:
-                            skip = True
-                        else:
-                            data_results.remove(previous_item)
-                        break
-                if skip:
-                    continue
-                data_results.append(result)
+        idx = -1
+        param_idx = 1
+        for result in id_sorted_recent_results:
+            idx += 1
+            if "parameters" in result and len(result["parameters"]) > 0:  # create unique names for parameterized tests
+                if idx > 0 and result["testCaseId"] == id_sorted_recent_results[idx - 1]["testCaseId"]:
+                    result["name"] += f" [{param_idx}]"
+                    if param_idx == 1:
+                        id_sorted_recent_results[idx - 1]["name"] += " [0]"
+                    param_idx += 1
+                else:
+                    param_idx = 1
 
-        for result in data_results:
+            self.sorted_recent_results = sorted(id_sorted_recent_results, key=get_sorting_key)
+
             self._process_steps(result)
             self.session["total"] += 1
             self.session["results"][result["status"]] += 1
@@ -170,8 +179,6 @@ class ReportBuilder:
 
         if self.session["total"] == 0:
             warnings.warn("No test result files were found!")
-
-        self.sorted_results = sorted(data_results, key=get_sorting_key)
 
         if self.session["start"] is not None:
             self.session["duration"] = str(timedelta(seconds=(self.session["stop"] - self.session["start"]) / 1000.0))
@@ -221,7 +228,7 @@ class ReportBuilder:
         """
         Main function to print the docx document. Raises Error if no allure result files were found.
         """
-        if not self.sorted_results:
+        if not self.sorted_recent_results:
             raise ImportError("No test result files were found in the given allure results folder.")
 
         self._print_cover()
@@ -240,7 +247,8 @@ class ReportBuilder:
         self.document.add_page_break()
 
         # print tests
-        for test in self.sorted_results:
+        for test in self.sorted_recent_results:
+            # print only the most recent test, history could be included later.
             self._print_test(test)
 
     def _print_attachments(self, item):
@@ -410,7 +418,6 @@ class ReportBuilder:
             self.document.add_paragraph("Test Details", style="Heading 1")
             i = 0
             detail_table = self.document.add_table(rows=len(self.config['details']), cols=2, style="Label table")
-            thin_details = {}
             for detail in self.config['details'].items():
                 detail_table.rows[i].cells[0].paragraphs[-1].clear().add_run(detail[0])
                 detail_table.rows[i].cells[1].paragraphs[-1].clear().add_run(detail[1].strip())
@@ -454,7 +461,7 @@ class ReportBuilder:
             if results[status] > 0:
                 result_table = self.document.add_table(rows=results[status], cols=2, style=f"{status} table")
                 i = 0
-                for test in self.sorted_results:
+                for test in self.sorted_recent_results:
                     if test['status'] == status:
                         result_table.rows[i].cells[0].paragraphs[-1].add_run(
                             test['name'])
@@ -542,11 +549,11 @@ class ReportBuilder:
                 and "statusDetails" in test
                 and len(test["statusDetails"]) != 0
                 and (
-                "message" in test["statusDetails"]
-                and len(test["statusDetails"]["message"]) != 0
-                or "trace" in config_info
-                and "trace" in test["statusDetails"]
-        )
+                    "message" in test["statusDetails"]
+                    and len(test["statusDetails"]["message"]) != 0
+                    or "trace" in config_info
+                    and "trace" in test["statusDetails"]
+                )
         ):
             self.document.add_heading("Details", level=2)
             if "message" in test["statusDetails"]:

@@ -1,3 +1,3 @@
-from .config import ReportConfig
-from .config import ConfigTags
-from .report_builder import ReportBuilder
+from .config import ReportConfig  # noqa
+from .config import ConfigTags  # noqa
+from .report_builder import ReportBuilder  # noqa
