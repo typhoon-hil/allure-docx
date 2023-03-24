@@ -1,2 +1,2 @@
-include allure_docx/template.docx
-include allure_docx/config/*
+include src/allure_docx/template.docx
+include src/allure_docx/config/*

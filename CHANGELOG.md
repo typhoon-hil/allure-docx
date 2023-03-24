@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added new information that can be added to the report
 - Removed `LibreOfficeToPDF`, instead use `soffice`
 - Removed `OfficeToPdf`, instead use `docx2pdf`
+- Pie chart replaced by ``matplotlib.pyploy.pie``, without necessity of ``cairo.dll`` and ``cairosvg`` (Python package).
 
 ## [0.3.2] - 2018-10-31
 ### Changed
