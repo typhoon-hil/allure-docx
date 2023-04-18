@@ -2,7 +2,7 @@
 DOCX and PDF report generation based on allure-generated result files.
 
 ## About
-This package is developed in collaboration by [Typhoon Hil](https://www.typhoon-hil.com/) and the [Fraunhofer Institute for Solar Energy Systems ISE](https://www.ise.fraunhofer.de/). Users are welcome to test and report problems and suggestions by creating an issue. Note that the package is not officially supported by typhoon hil and is still on the alpha phase.
+This package is developed in collaboration by [Typhoon Hil](https://www.typhoon-hil.com/) and the [Fraunhofer Institute for Solar Energy Systems ISE](https://www.ise.fraunhofer.de/). Users are welcome to test and report problems and suggestions by creating an issue. Note that the package is not officially supported by Typhoon HIL and is still on the alpha phase.
 
 
 ### Limitations
