@@ -1,11 +1,14 @@
 from setuptools import setup, find_packages
+from pathlib import Path
 
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 
 setup(
     name="allure-docx",
-    description="docx report generator based on allure-generated json files",
-    author="Victor Maryama (Typhoon HIL, Inc)",
-    version="0.4.0",
+    description="Docx report generator based on allure-generated json files.",
+    author="Victor Maryama (Typhoon HIL, Inc), Bjarne Scheimann (Fraunhofer Institute for Solar Energy Systems ISE)",
+    version="0.4.0a1",
     license="MIT",
     install_requires=[
         'setuptools-git~=1.2',
@@ -25,5 +28,12 @@ setup(
 
     entry_points={
         'console_scripts': ['allure-docx = allure_docx.commandline:main'],
+    },
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+
+    project_urls={
+        'Source':  'https://github.com/typhoon-hil/allure-docx',
+        'Tracker': 'https://github.com/typhoon-hil/allure-docx/issues',
     },
 )
