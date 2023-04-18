@@ -145,7 +145,12 @@ The `--pdf` option will search for either Word (Windows only) or `soffice` (Libr
 
 If both Word and `soffice` are present, Word will be used.
 
-## Building the standalone executable
+## Previous versions
+
+The previous version of the package can be found in the releases page of the plugin [here](https://github.com/typhoon-hil/allure-docx/releases).
+
+## Miscelaneous
+### Building the standalone executable
 
 We use PyInstaller to create standalone executables. If you want to build an executable yourself, follow these steps:
 - Create a new virtual environment with the proper python version (tested using python 3, 32 or 64 bit so far)
