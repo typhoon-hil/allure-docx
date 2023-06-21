@@ -58,6 +58,7 @@ body = fbpsu
 teardown = fbpsu
 duration = fbpsu
 attachments = fbpsu
+steps = fbpsu
 [labels]
 severity = fbpsu
 [cover]

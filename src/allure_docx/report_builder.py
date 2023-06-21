@@ -311,9 +311,9 @@ class ReportBuilder:
                         hdr_cells = table.rows[0].cells
                         hdr_cells[0].add_paragraph(step["statusDetails"]["trace"] + "\n", style="Code")
                         self.document.add_paragraph("", style=None)
+                self._print_steps(step, config_info, indent + 1)
                 if "attachments" in config_info:
                     self._print_attachments(step)
-                self._print_steps(step, config_info, indent + 1)
 
     @staticmethod
     def _add_field(run, field):
@@ -578,15 +578,17 @@ class ReportBuilder:
                 if "befores" in parent:
                     for before in parent["befores"]:
                         self.document.add_paragraph(f"[Fixture] {before['name']}", style="Step")
+                        if "steps" in config_info:
+                            self._print_steps(before, config_info, 1)
                         self._print_attachments(before)
-                        self._print_steps(before, config_info, 1)
             if self.document.paragraphs[-1].text == "Test Setup":
                 self._delete_paragraph(self.document.paragraphs[-1])
 
         if "body" in config_info:
             self.document.add_heading("Test Body", level=2)
+            if "steps" in config_info:
+                self._print_steps(test, config_info)
             self._print_attachments(test)
-            self._print_steps(test, config_info)
             if self.document.paragraphs[-1].text == "Test Body":
                 self._delete_paragraph(self.document.paragraphs[-1])
 
@@ -596,8 +598,9 @@ class ReportBuilder:
                 if "afters" in parent:
                     for after in parent["afters"]:
                         self.document.add_paragraph(f"[Fixture] {after['name']}", style="Step")
+                        if "steps" in config_info:
+                            self._print_steps(after, config_info, 1)
                         self._print_attachments(after)
-                        self._print_steps(after, config_info, 1)
             if self.document.paragraphs[-1].text == "Test Teardown":
                 self._delete_paragraph(self.document.paragraphs[-1])
 

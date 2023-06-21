@@ -8,7 +8,7 @@ setup(
     name="allure-docx",
     description="Docx report generator based on allure-generated json files.",
     author="Victor Maryama (Typhoon HIL, Inc), Bjarne Scheimann (Fraunhofer Institute for Solar Energy Systems ISE)",
-    version="0.4.0a1",
+    version="0.4.0a2",
     license="MIT",
     install_requires=[
         'setuptools-git~=1.2',
