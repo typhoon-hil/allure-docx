@@ -1,4 +1,6 @@
+import logging
 import os
+import traceback
 import warnings
 import shutil
 import subprocess
@@ -53,9 +55,14 @@ class ReportBuilder:
         }
 
         self.sorted_recent_results = None
-        self._build_data()
-        self._create_pie_chart()
-        self._print_report()
+        try:
+            self._build_data()
+            self._create_pie_chart()
+            self._print_report()
+        except KeyError:
+            raise KeyError(f"A key error for the json data occurred. Your json data may be corrupt or possibly an "
+                           "unsupported framework was used that. See https://github.com/typhoon-hil/allure-docx/issues"
+                           " if this is a known issue or create a new one if it is not.")
 
     def save_report(self, output):
         """
@@ -112,7 +119,7 @@ class ReportBuilder:
 
     def _build_data(self):
         """
-        Build the session dict and the sorted_reuslts dict from the given allure directory.
+        Build the session dict and the sorted_results dict from the given allure directory.
         """
 
         def get_sorting_key(d):
@@ -142,20 +149,30 @@ class ReportBuilder:
         for tests in history_data_results:
             tests[1].sort(key=lambda x: x["start"], reverse=True)
         recent_results = [results[1][0] for results in history_data_results]  # get only the most recent results
-        id_sorted_recent_results = sorted(recent_results, key=lambda x: x["testCaseId"])
+        has_test_case_id = True
+        try:
+            id_sorted_recent_results = sorted(recent_results, key=lambda x: x["testCaseId"])
+        except KeyError:
+            has_test_case_id = False
+            id_sorted_recent_results = recent_results
 
         idx = -1
         param_idx = 1
         for result in id_sorted_recent_results:
             idx += 1
-            if "parameters" in result and len(result["parameters"]) > 0:  # create unique names for parameterized tests
-                if idx > 0 and result["testCaseId"] == id_sorted_recent_results[idx - 1]["testCaseId"]:
-                    result["name"] += f" [{param_idx}]"
-                    if param_idx == 1:
-                        id_sorted_recent_results[idx - 1]["name"] += " [0]"
-                    param_idx += 1
-                else:
-                    param_idx = 1
+            if has_test_case_id:
+                # create unique names for parameterized tests
+                if "parameters" in result and len(result["parameters"]) > 0:
+                    if idx > 0 and result["testCaseId"] == id_sorted_recent_results[idx - 1]["testCaseId"]:
+                        result["name"] += f" [{param_idx}]"
+                        if param_idx == 1:
+                            id_sorted_recent_results[idx - 1]["name"] += " [0]"
+                        param_idx += 1
+                    else:
+                        param_idx = 1
+            else:
+                logging.warning("Test files do not have a unique testCaseId. This seems to be an issue with some "
+                                "testing frameworks like TestNG. Parametrized tests will not have unique titles.")
 
             self.sorted_recent_results = sorted(id_sorted_recent_results, key=get_sorting_key)
 
