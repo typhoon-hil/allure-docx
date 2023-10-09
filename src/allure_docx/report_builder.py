@@ -149,30 +149,21 @@ class ReportBuilder:
         for tests in history_data_results:
             tests[1].sort(key=lambda x: x["start"], reverse=True)
         recent_results = [results[1][0] for results in history_data_results]  # get only the most recent results
-        has_test_case_id = True
-        try:
-            id_sorted_recent_results = sorted(recent_results, key=lambda x: x["testCaseId"])
-        except KeyError:
-            has_test_case_id = False
-            id_sorted_recent_results = recent_results
+        id_sorted_recent_results = sorted(recent_results, key=lambda x: x["fullName"])
 
         idx = -1
         param_idx = 1
         for result in id_sorted_recent_results:
             idx += 1
-            if has_test_case_id:
-                # create unique names for parameterized tests
-                if "parameters" in result and len(result["parameters"]) > 0:
-                    if idx > 0 and result["testCaseId"] == id_sorted_recent_results[idx - 1]["testCaseId"]:
-                        result["name"] += f" [{param_idx}]"
-                        if param_idx == 1:
-                            id_sorted_recent_results[idx - 1]["name"] += " [0]"
-                        param_idx += 1
-                    else:
-                        param_idx = 1
-            else:
-                logging.warning("Test files do not have a unique testCaseId. This seems to be an issue with some "
-                                "testing frameworks like TestNG. Parametrized tests will not have unique titles.")
+            # create unique names for parameterized tests
+            if "parameters" in result and len(result["parameters"]) > 0:
+                if idx > 0 and result["fullName"] == id_sorted_recent_results[idx - 1]["fullName"]:
+                    result["name"] += f" [{param_idx}]"
+                    if param_idx == 1:
+                        id_sorted_recent_results[idx - 1]["name"] += " [0]"
+                    param_idx += 1
+                else:
+                    param_idx = 1
 
             self.sorted_recent_results = sorted(id_sorted_recent_results, key=get_sorting_key)
 
