@@ -81,13 +81,14 @@ class ReportBuilder:
 
         try:
             convert(temp_docx_filename, output)
-        except Exception:  # noqa
+        except Exception as e:  # noqa
             if soffice is not None:
                 result_dir = os.path.dirname(output)
                 subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, temp_docx_filename])
                 os.rename(temp_pdf_filename, output)
             else:
-                print("Could not find neither find Word nor soffice (LibreOffice). Not generating PDF.")
+                print("Failed to convert via docx2pdf or soffice.")
+                print(str(e))
 
         os.remove(temp_docx_filename)
 
