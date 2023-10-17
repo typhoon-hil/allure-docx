@@ -15,7 +15,7 @@ setup(
         'matplotlib>=3.0, < 4.0',
         'docx2pdf~=0.1.8',
         'click~=8.1',
-        'python-docx~=0.8.2',
+        'python-docx~=1.0.1',
     ],
     extras_require={
         'dev': ['pyinstaller'],

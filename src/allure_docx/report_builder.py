@@ -1,6 +1,4 @@
-import logging
 import os
-import traceback
 import warnings
 import shutil
 import subprocess
