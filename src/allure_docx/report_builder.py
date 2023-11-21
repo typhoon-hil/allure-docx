@@ -33,8 +33,8 @@ class ReportBuilder:
 
         self.session = {
             "allure_dir": config['allure_dir'],
-            "start": 0,
-            "stop": 0,
+            "start": None,
+            "stop": None,
             "results": {
                 "passed": 0,
                 "skipped": 0,
@@ -188,7 +188,7 @@ class ReportBuilder:
             warnings.warn("No test result files were found!")
 
         if self.session["start"] is not None:
-            self.session["duration"] = str(timedelta(seconds=(self.session["stop"] - self.session["start"]) / 1000.0))
+            self.session["duration"] = self.session["stop"] - self.session["start"]
             self.session["start"] = ctime(self.session["start"] / 1000.0)
             self.session["stop"] = ctime(self.session["stop"] / 1000.0)
         else:
@@ -251,12 +251,11 @@ class ReportBuilder:
         self._print_details()
         self._print_session_summary()
 
-        self.document.add_page_break()
-
         # print tests
         for test in self.sorted_recent_results:
             # print only the most recent test, history could be included later.
-            self._print_test(test)
+            if "tests" in self.config["info"][test["status"]]:
+                self._print_test(test)
 
     def _print_attachments(self, item):
         """
@@ -327,6 +326,7 @@ class ReportBuilder:
         """
         Creates a docx field and appends it to the given run object.
         """
+
         def create_attribute(element, name, value):
             element.set(qn(name), value)
 
@@ -442,26 +442,35 @@ class ReportBuilder:
         """
         Prints the session summary, including results, total running time and a pie chart.
         """
-        self.document.add_paragraph("Test Session Summary", style="Heading 1")
 
-        table = self.document.add_table(rows=1, cols=2)
-        summary_cell = table.rows[0].cells[0]
-        summary_cell.add_paragraph(
-            f"Start: {self.session['start']}\nEnd: {self.session['stop']}\nDuration: {self.session['duration']}"
-        )
-        self._delete_paragraph(summary_cell.paragraphs[0])
+        has_session_summary = (int(self.config["summary"]["overview"]) is not 0
+                               or int(self.config["summary"]["table"]) is not 0)
 
-        results_strs = []
-        for item in self.session["results"]:
-            results_strs.append(f"{item}: {self.session['results'][item]} ({self.session['results_relative'][item]})")
-        summary_cell.add_paragraph("\n".join(results_strs))
+        if has_session_summary:
+            self.document.add_paragraph("Test Session Summary", style="Heading 1")
 
-        pie_chart_cell = table.rows[0].cells[1]
-        paragraph = pie_chart_cell.paragraphs[0]
-        run = paragraph.add_run()
-        run.add_picture(self.session["pie_chart_source"], width=Mm(75))
+        if int(self.config["summary"]["overview"]) != 0:
+            table = self.document.add_table(rows=1, cols=2)
+            summary_cell = table.rows[0].cells[0]
+            duration_string = self._duration_to_string(self.session["duration"])
+            summary_cell.add_paragraph(
+                f"Start: {self.session['start']}\nEnd: {self.session['stop']}\nDuration: {duration_string}"
+            )
+            self._delete_paragraph(summary_cell.paragraphs[0])
 
-        self.document.add_paragraph("")
+            results_strs = []
+            for item in self.session["results"]:
+                results_strs.append(
+                    f"{item}: {self.session['results'][item]} ({self.session['results_relative'][item]})")
+            summary_cell.add_paragraph("\n".join(results_strs))
+
+            pie_chart_cell = table.rows[0].cells[1]
+            paragraph = pie_chart_cell.paragraphs[0]
+            run = paragraph.add_run()
+            run.add_picture(self.session["pie_chart_source"], width=Mm(75))
+
+            self.document.add_paragraph("")
+
         results = self.session['results']
 
         def print_result_table(status):
@@ -483,10 +492,36 @@ class ReportBuilder:
                 for cell in result_table.columns[1].cells:
                     cell.width = Cm(4)
 
-        print_result_table("failed")
-        print_result_table("broken")
-        print_result_table("skipped")
-        print_result_table("passed")
+        if int(self.config["summary"]["table"]) != 0:
+            if "tests" in self.config["info"]["failed"]:
+                print_result_table("failed")
+            if "tests" in self.config["info"]["broken"]:
+                print_result_table("broken")
+            if "tests" in self.config["info"]["skipped"]:
+                print_result_table("skipped")
+            if "tests" in self.config["info"]["passed"]:
+                print_result_table("passed")
+
+        if has_session_summary:
+            self.document.add_page_break()
+
+    @staticmethod
+    def _duration_to_string(ms) -> str:
+        """
+        Parses milliseconds to a fitting string with unit.
+        """
+        duration_unit = "ms"
+        if ms < 1000:
+            return str(ms) + "ms"
+        seconds = ms / 1000.0
+        if seconds < 60:
+            return str(int(seconds)) + "s"
+        minutes = seconds / 60.0
+        if minutes < 60:
+            return str(int(minutes)) + "m " + str(int(seconds % 60)) + "s"
+        hours = minutes / 60
+        return str(int(hours)) + "h " + str(int(minutes % 60 % 60)) + "m " + str(int(seconds % 60)) + "s"
+
 
     def _print_test(self, test):
         """
@@ -502,17 +537,11 @@ class ReportBuilder:
         added_table = False
         if "duration" in config_info:
             duration = test["stop"] - test["start"]
-            duration_unit = "ms"
-            if duration > 1000:
-                duration_unit = "s"
-                duration = duration / 1000
-                if duration > 60:
-                    duration_unit = "min"
-                    duration = duration / 60
+            duration_string = self._duration_to_string(duration)
 
             table = self.document.add_table(rows=1, cols=2, style="Label table")
             table.rows[0].cells[0].paragraphs[-1].clear().add_run("Duration")
-            table.rows[0].cells[1].paragraphs[-1].clear().add_run(str(duration) + duration_unit)
+            table.rows[0].cells[1].paragraphs[-1].clear().add_run(duration_string)
             added_table = True
 
         # add labels to table
@@ -543,8 +572,6 @@ class ReportBuilder:
             self.document.add_heading("Description", level=2)
             if "description" in test and len(test["description"]) != 0:
                 self.document.add_paragraph(test["description"])
-            else:
-                self.document.add_paragraph("No description available.")
 
         if "parameters" in config_info and "parameters" in test and len(test["parameters"]) != 0:
             self.document.add_heading("Parameters", level=2)
@@ -556,11 +583,11 @@ class ReportBuilder:
                 and "statusDetails" in test
                 and len(test["statusDetails"]) != 0
                 and (
-                    "message" in test["statusDetails"]
-                    and len(test["statusDetails"]["message"]) != 0
-                    or "trace" in config_info
-                    and "trace" in test["statusDetails"]
-                )
+                "message" in test["statusDetails"]
+                and len(test["statusDetails"]["message"]) != 0
+                or "trace" in config_info
+                and "trace" in test["statusDetails"]
+        )
         ):
             self.document.add_heading("Details", level=2)
             if "message" in test["statusDetails"]:

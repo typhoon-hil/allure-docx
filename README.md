@@ -48,6 +48,7 @@ When using a custom configuration the standard configuration is used as base and
 The standard file looks like this:
 ```
 [info]
+tests = fbpsu
 description = fbpsu
 details = fbpsu
 trace = fbpsu
@@ -63,6 +64,9 @@ steps = fbpsu
 severity = fbpsu
 [cover]
 title = Allure
+[summary]
+overview = 1
+table = 1
 [details]
 ```
 
@@ -72,7 +76,8 @@ The report will display tests with the specified field (info and labels section)
 |--------|--------|--------|---------|---------|
 | f      | b      | p      | s       | u       |
 
-There are some additional information you can add to your report. This includes following:
+Change overview or table in the summary section to 0 if you want to remove them from the report.
+There are also some additional information you can add. This includes following:
 
 <details>
     <summary style="font-weight: bold">Add custom labels</summary>
