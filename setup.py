@@ -8,14 +8,14 @@ setup(
     name="allure-docx",
     description="Docx report generator based on allure-generated json files.",
     author="Victor Maryama (Typhoon HIL, Inc), Bjarne Scheimann (Fraunhofer Institute for Solar Energy Systems ISE)",
-    version="0.4.0a1",
+    version="0.4.2",
     license="MIT",
     install_requires=[
         'setuptools-git~=1.2',
         'matplotlib>=3.0, < 4.0',
         'docx2pdf~=0.1.8',
-        'click',
-        'python-docx',
+        'click~=8.1',
+        'python-docx~=1.0.1',
     ],
     extras_require={
         'dev': ['pyinstaller'],

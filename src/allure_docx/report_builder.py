@@ -1,4 +1,6 @@
+import logging
 import os
+import re
 import warnings
 import shutil
 import subprocess
@@ -33,8 +35,8 @@ class ReportBuilder:
 
         self.session = {
             "allure_dir": config['allure_dir'],
-            "start": 0,
-            "stop": 0,
+            "start": None,
+            "stop": None,
             "results": {
                 "passed": 0,
                 "skipped": 0,
@@ -53,9 +55,14 @@ class ReportBuilder:
         }
 
         self.sorted_recent_results = None
-        self._build_data()
-        self._create_pie_chart()
-        self._print_report()
+        try:
+            self._build_data()
+            self._create_pie_chart()
+            self._print_report()
+        except KeyError:
+            raise KeyError(f"A key error for the json data occurred. Your json data may be corrupt or possibly an "
+                           "unsupported framework was used that. See https://github.com/typhoon-hil/allure-docx/issues"
+                           " if this is a known issue or create a new one if it is not.")
 
     def save_report(self, output):
         """
@@ -76,13 +83,22 @@ class ReportBuilder:
 
         try:
             convert(temp_docx_filename, output)
-        except Exception:  # noqa
+        except Exception as e:  # noqa
             if soffice is not None:
+                libre_version_string = subprocess.check_output(["soffice", "--version"]).decode("utf-8")
+                libre_version_match = re.search(r"(\d+)\.\d+\.\d+\.\d+", libre_version_string)
+                libre_version = libre_version_match.group()
+                libre_major_version = libre_version_match.group(1)
+                if int(libre_major_version) < 7:
+                    logging.warning("Working with Libre Office version " + libre_version
+                                    + " to generate pdf from docx. Version > 7 is recommended. Bugs like faulty color "
+                                      "or missing line breaks may appear.")
                 result_dir = os.path.dirname(output)
                 subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, temp_docx_filename])
                 os.rename(temp_pdf_filename, output)
             else:
-                print("Could not find neither find Word nor soffice (LibreOffice). Not generating PDF.")
+                print("Failed to convert via docx2pdf or soffice.")
+                print(str(e))
 
         os.remove(temp_docx_filename)
 
@@ -112,7 +128,7 @@ class ReportBuilder:
 
     def _build_data(self):
         """
-        Build the session dict and the sorted_reuslts dict from the given allure directory.
+        Build the session dict and the sorted_results dict from the given allure directory.
         """
 
         def get_sorting_key(d):
@@ -142,14 +158,15 @@ class ReportBuilder:
         for tests in history_data_results:
             tests[1].sort(key=lambda x: x["start"], reverse=True)
         recent_results = [results[1][0] for results in history_data_results]  # get only the most recent results
-        id_sorted_recent_results = sorted(recent_results, key=lambda x: x["testCaseId"])
+        id_sorted_recent_results = sorted(recent_results, key=lambda x: x["fullName"])
 
         idx = -1
         param_idx = 1
         for result in id_sorted_recent_results:
             idx += 1
-            if "parameters" in result and len(result["parameters"]) > 0:  # create unique names for parameterized tests
-                if idx > 0 and result["testCaseId"] == id_sorted_recent_results[idx - 1]["testCaseId"]:
+            # create unique names for parameterized tests
+            if "parameters" in result and len(result["parameters"]) > 0:
+                if idx > 0 and result["fullName"] == id_sorted_recent_results[idx - 1]["fullName"]:
                     result["name"] += f" [{param_idx}]"
                     if param_idx == 1:
                         id_sorted_recent_results[idx - 1]["name"] += " [0]"
@@ -181,7 +198,7 @@ class ReportBuilder:
             warnings.warn("No test result files were found!")
 
         if self.session["start"] is not None:
-            self.session["duration"] = str(timedelta(seconds=(self.session["stop"] - self.session["start"]) / 1000.0))
+            self.session["duration"] = self.session["stop"] - self.session["start"]
             self.session["start"] = ctime(self.session["start"] / 1000.0)
             self.session["stop"] = ctime(self.session["stop"] / 1000.0)
         else:
@@ -244,12 +261,11 @@ class ReportBuilder:
         self._print_details()
         self._print_session_summary()
 
-        self.document.add_page_break()
-
         # print tests
         for test in self.sorted_recent_results:
             # print only the most recent test, history could be included later.
-            self._print_test(test)
+            if "tests" in self.config["info"][test["status"]]:
+                self._print_test(test)
 
     def _print_attachments(self, item):
         """
@@ -311,15 +327,16 @@ class ReportBuilder:
                         hdr_cells = table.rows[0].cells
                         hdr_cells[0].add_paragraph(step["statusDetails"]["trace"] + "\n", style="Code")
                         self.document.add_paragraph("", style=None)
+                self._print_steps(step, config_info, indent + 1)
                 if "attachments" in config_info:
                     self._print_attachments(step)
-                self._print_steps(step, config_info, indent + 1)
 
     @staticmethod
     def _add_field(run, field):
         """
         Creates a docx field and appends it to the given run object.
         """
+
         def create_attribute(element, name, value):
             element.set(qn(name), value)
 
@@ -435,26 +452,35 @@ class ReportBuilder:
         """
         Prints the session summary, including results, total running time and a pie chart.
         """
-        self.document.add_paragraph("Test Session Summary", style="Heading 1")
 
-        table = self.document.add_table(rows=1, cols=2)
-        summary_cell = table.rows[0].cells[0]
-        summary_cell.add_paragraph(
-            f"Start: {self.session['start']}\nEnd: {self.session['stop']}\nDuration: {self.session['duration']}"
-        )
-        self._delete_paragraph(summary_cell.paragraphs[0])
+        has_session_summary = (int(self.config["summary"]["overview"]) is not 0
+                               or int(self.config["summary"]["table"]) is not 0)
 
-        results_strs = []
-        for item in self.session["results"]:
-            results_strs.append(f"{item}: {self.session['results'][item]} ({self.session['results_relative'][item]})")
-        summary_cell.add_paragraph("\n".join(results_strs))
+        if has_session_summary:
+            self.document.add_paragraph("Test Session Summary", style="Heading 1")
 
-        pie_chart_cell = table.rows[0].cells[1]
-        paragraph = pie_chart_cell.paragraphs[0]
-        run = paragraph.add_run()
-        run.add_picture(self.session["pie_chart_source"], width=Mm(75))
+        if int(self.config["summary"]["overview"]) != 0:
+            table = self.document.add_table(rows=1, cols=2)
+            summary_cell = table.rows[0].cells[0]
+            duration_string = self._duration_to_string(self.session["duration"])
+            summary_cell.add_paragraph(
+                f"Start: {self.session['start']}\nEnd: {self.session['stop']}\nDuration: {duration_string}"
+            )
+            self._delete_paragraph(summary_cell.paragraphs[0])
 
-        self.document.add_paragraph("")
+            results_strs = []
+            for item in self.session["results"]:
+                results_strs.append(
+                    f"{item}: {self.session['results'][item]} ({self.session['results_relative'][item]})")
+            summary_cell.add_paragraph("\n".join(results_strs))
+
+            pie_chart_cell = table.rows[0].cells[1]
+            paragraph = pie_chart_cell.paragraphs[0]
+            run = paragraph.add_run()
+            run.add_picture(self.session["pie_chart_source"], width=Mm(75))
+
+            self.document.add_paragraph("")
+
         results = self.session['results']
 
         def print_result_table(status):
@@ -476,10 +502,35 @@ class ReportBuilder:
                 for cell in result_table.columns[1].cells:
                     cell.width = Cm(4)
 
-        print_result_table("failed")
-        print_result_table("broken")
-        print_result_table("skipped")
-        print_result_table("passed")
+        if int(self.config["summary"]["table"]) != 0:
+            if "tests" in self.config["info"]["failed"]:
+                print_result_table("failed")
+            if "tests" in self.config["info"]["broken"]:
+                print_result_table("broken")
+            if "tests" in self.config["info"]["skipped"]:
+                print_result_table("skipped")
+            if "tests" in self.config["info"]["passed"]:
+                print_result_table("passed")
+
+        if has_session_summary:
+            self.document.add_page_break()
+
+    @staticmethod
+    def _duration_to_string(ms) -> str:
+        """
+        Parses milliseconds to a fitting string with unit.
+        """
+        duration_unit = "ms"
+        if ms < 1000:
+            return str(ms) + "ms"
+        seconds = ms / 1000.0
+        if seconds < 60:
+            return str(int(seconds)) + "s"
+        minutes = seconds / 60.0
+        if minutes < 60:
+            return str(int(minutes)) + "m " + str(int(seconds % 60)) + "s"
+        hours = minutes / 60
+        return str(int(hours)) + "h " + str(int(minutes % 60 % 60)) + "m " + str(int(seconds % 60)) + "s"
 
     def _print_test(self, test):
         """
@@ -495,17 +546,11 @@ class ReportBuilder:
         added_table = False
         if "duration" in config_info:
             duration = test["stop"] - test["start"]
-            duration_unit = "ms"
-            if duration > 1000:
-                duration_unit = "s"
-                duration = duration / 1000
-                if duration > 60:
-                    duration_unit = "min"
-                    duration = duration / 60
+            duration_string = self._duration_to_string(duration)
 
             table = self.document.add_table(rows=1, cols=2, style="Label table")
             table.rows[0].cells[0].paragraphs[-1].clear().add_run("Duration")
-            table.rows[0].cells[1].paragraphs[-1].clear().add_run(str(duration) + duration_unit)
+            table.rows[0].cells[1].paragraphs[-1].clear().add_run(duration_string)
             added_table = True
 
         # add labels to table
@@ -536,8 +581,6 @@ class ReportBuilder:
             self.document.add_heading("Description", level=2)
             if "description" in test and len(test["description"]) != 0:
                 self.document.add_paragraph(test["description"])
-            else:
-                self.document.add_paragraph("No description available.")
 
         if "parameters" in config_info and "parameters" in test and len(test["parameters"]) != 0:
             self.document.add_heading("Parameters", level=2)
@@ -549,11 +592,11 @@ class ReportBuilder:
                 and "statusDetails" in test
                 and len(test["statusDetails"]) != 0
                 and (
-                    "message" in test["statusDetails"]
-                    and len(test["statusDetails"]["message"]) != 0
-                    or "trace" in config_info
-                    and "trace" in test["statusDetails"]
-                )
+                "message" in test["statusDetails"]
+                and len(test["statusDetails"]["message"]) != 0
+                or "trace" in config_info
+                and "trace" in test["statusDetails"]
+        )
         ):
             self.document.add_heading("Details", level=2)
             if "message" in test["statusDetails"]:
@@ -578,15 +621,17 @@ class ReportBuilder:
                 if "befores" in parent:
                     for before in parent["befores"]:
                         self.document.add_paragraph(f"[Fixture] {before['name']}", style="Step")
+                        if "steps" in config_info:
+                            self._print_steps(before, config_info, 1)
                         self._print_attachments(before)
-                        self._print_steps(before, config_info, 1)
             if self.document.paragraphs[-1].text == "Test Setup":
                 self._delete_paragraph(self.document.paragraphs[-1])
 
         if "body" in config_info:
             self.document.add_heading("Test Body", level=2)
+            if "steps" in config_info:
+                self._print_steps(test, config_info)
             self._print_attachments(test)
-            self._print_steps(test, config_info)
             if self.document.paragraphs[-1].text == "Test Body":
                 self._delete_paragraph(self.document.paragraphs[-1])
 
@@ -596,8 +641,9 @@ class ReportBuilder:
                 if "afters" in parent:
                     for after in parent["afters"]:
                         self.document.add_paragraph(f"[Fixture] {after['name']}", style="Step")
+                        if "steps" in config_info:
+                            self._print_steps(after, config_info, 1)
                         self._print_attachments(after)
-                        self._print_steps(after, config_info, 1)
             if self.document.paragraphs[-1].text == "Test Teardown":
                 self._delete_paragraph(self.document.paragraphs[-1])
 

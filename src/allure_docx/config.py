@@ -52,6 +52,7 @@ class ReportConfig(dict):
             raise ValueError("Cannot initialize ReportConfig with both tag and file.")
 
         self.config_parser = ConfigParser()
+        self.config_parser.optionxform = str
         if tag:
             self.config_parser.read(tag.value)
         else:
