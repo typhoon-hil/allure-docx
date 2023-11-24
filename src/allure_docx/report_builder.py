@@ -1,4 +1,6 @@
+import logging
 import os
+import re
 import warnings
 import shutil
 import subprocess
@@ -83,6 +85,14 @@ class ReportBuilder:
             convert(temp_docx_filename, output)
         except Exception as e:  # noqa
             if soffice is not None:
+                libre_version_string = subprocess.check_output(["soffice", "--version"]).decode("utf-8")
+                libre_version_match = re.search(r"(\d+)\.\d+\.\d+\.\d+", libre_version_string)
+                libre_version = libre_version_match.group()
+                libre_major_version = libre_version_match.group(1)
+                if int(libre_major_version) < 7:
+                    logging.warning("Working with Libre Office version " + libre_version
+                                    + " to generate pdf from docx. Version > 7 is recommended. Bugs like faulty color "
+                                      "or missing line breaks may appear.")
                 result_dir = os.path.dirname(output)
                 subprocess.call(["soffice", "--convert-to", "pdf", "--outdir", result_dir, temp_docx_filename])
                 os.rename(temp_pdf_filename, output)
@@ -521,7 +531,6 @@ class ReportBuilder:
             return str(int(minutes)) + "m " + str(int(seconds % 60)) + "s"
         hours = minutes / 60
         return str(int(hours)) + "h " + str(int(minutes % 60 % 60)) + "m " + str(int(seconds % 60)) + "s"
-
 
     def _print_test(self, test):
         """

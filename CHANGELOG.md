@@ -4,14 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.4.2] - 2023-11-21
+## [0.4.2] - 2023-11-24
+### Changed
 - added feature to remove summary overview/table
+- added warning if Libre Office version < 7 is used
+### Fixed
 - fixed duration bug
 
-## [0.4.1]
-- Fixed issue with missing testCaseId
+## [0.4.1] 
+### Changed - 2023-10-09
 - switched order of printing steps and attachments (1. steps, 2. attachments)
 - added steps configuration variable
+
+- Fixed issue with missing testCaseId
 
 ## [0.4.0] - 2023-01-19
 ### Changed
