@@ -3,6 +3,7 @@ import warnings
 import shutil
 import subprocess
 import json
+import csv
 import matplotlib.pyplot as plt
 
 from os import listdir
@@ -10,7 +11,7 @@ from os.path import join, isfile
 from time import ctime
 from datetime import timedelta, datetime
 
-from docx.shared import Mm, Cm
+from docx.shared import Mm, Cm, Pt
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
@@ -260,6 +261,28 @@ class ReportBuilder:
                 if 'name' not in attachment:
                     attachment['name'] = ""
                 self.document.add_paragraph(f"[Attachment] {attachment['name']}", style="Step")
+                if "json" in attachment["type"]:
+                    json_attachment_path = os.path.abspath(join(self.session["allure_dir"], attachment["source"]))
+                    with open(json_attachment_path, "r") as json_attachment:
+                        attachment_content = json.loads(json_attachment.read())
+                        table = self.document.add_table(rows=1, cols=1, style="JSON Table")
+                        hdr_cells = table.rows[0].cells
+                        hdr_cells[0].text = json.dumps(attachment_content, indent=4)
+                        hdr_cells[0].paragraphs[0].style = "Code"
+                        self.document.add_paragraph("", style=None)
+                if "csv" in attachment["type"]:
+                    csv_attachment_path = os.path.abspath(join(self.session["allure_dir"], attachment["source"]))
+                    with open(csv_attachment_path, "r", newline="") as csv_attachment:
+                        csv_reader = csv.reader(csv_attachment)
+                        csv_content = list(csv_reader)
+                        csv_rows = max(len(csv_content), 1)
+                        csv_cols = max(len(csv_content[0]), 1)
+                        table = self.document.add_table(rows=csv_rows, cols=csv_cols, style="Normal table")
+                        for row in range(csv_rows):
+                            cells = table.rows[row].cells
+                            for cell in range(csv_cols):
+                                cell_obj = cells[cell]
+                                cell_obj.text = f"{csv_content[row][cell]}"
                 if "image" in attachment["type"]:
                     self.document.add_picture(
                         os.path.join(self.session["allure_dir"], attachment["source"]),

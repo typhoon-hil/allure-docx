@@ -1,0 +1,45 @@
+{
+  "result": [
+    {
+      "message": "Hello, Vito! Your order number is: #3",
+      "phoneNumber": "(521) 427-9720 x544",
+      "phoneVariation": "+90 375 525 10 48",
+      "status": "disabled",
+      "name": {
+        "first": "Chadrick",
+        "middle": "Reagan",
+        "last": "Kuphal"
+      },
+      "username": "Chadrick-Kuphal",
+      "password": "J8Jgt1DuyMFNISs",
+      "emails": ["Ryan_Smith@gmail.com", "Sylvia44@gmail.com"],
+      "location": {
+        "street": "4353 Brenda Common",
+        "city": "Fort Cassandreport",
+        "state": "Louisiana",
+        "country": "Pitcairn Islands",
+        "zip": "10741",
+        "coordinates": {
+          "latitude": "-77.0296",
+          "longitude": "175.509"
+        }
+      },
+      "website": "https://thankful-ectoderm.name",
+      "domain": "crowded-reach.org",
+      "job": {
+        "title": "Regional Configuration Engineer",
+        "descriptor": "Product",
+        "area": "Markets",
+        "type": "Manager",
+        "company": "Strosin - Hermann"
+      },
+      "creditCard": {
+        "number": "3454-661650-87435",
+        "cvv": "556",
+        "issuer": "discover"
+      },
+      "uuid": "51a6af8c-5325-46eb-b676-6595eda6ed1a",
+      "objectId": "66e27ecf3b0eabdecafe0a59"
+    }
+  ]
+}
